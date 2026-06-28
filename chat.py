@@ -46,6 +46,18 @@ def chat(model=None):
             else:
                 print(f"未知模型 {name}。可选：{', '.join(models)}")
             continue
+        if you.startswith("/plan"):
+            from pathlib import Path
+            plan_prompt = (Path(__file__).parent / "plan.txt").read_text("utf-8")
+            question = you[len("/plan"):].strip() or "请规划一下当前任务"
+            plan_messages = [
+                {"role": "system", "content": plan_prompt},
+                {"role": "user", "content": question},
+            ]
+            print("（计划模式：只做规划不执行代码）")
+            agent_mod._stop = False
+            result, _ = agent_mod.agent(question, plan_messages, model)
+            continue
         agent_mod._stop = False
         result, messages = agent_mod.agent(you, messages, model)
         if agent_mod._stop:
