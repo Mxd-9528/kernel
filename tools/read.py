@@ -56,12 +56,21 @@ def _read_pdf(file_path, offset=None, limit=None):
     try:
         import pdfplumber
     except ImportError:
-        return Result(
-            "读取 PDF 需要 pdfplumber 支持，请执行：pip install pdfplumber",
-            error=ImportError("pdfplumber not installed"),
-            file_path=file_path,
-            pages=0,
-        )
+        import subprocess
+        import sys
+
+        try:
+            print("[正在自动安装 pdfplumber，首次使用请稍候...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pdfplumber"])
+            import pdfplumber
+            print("[pdfplumber 安装完成]")
+        except Exception as e:
+            return Result(
+                f"自动安装 pdfplumber 失败，请手动执行：{sys.executable} -m pip install pdfplumber\n错误：{e}",
+                error=e,
+                file_path=file_path,
+                pages=0,
+            )
 
     try:
         with pdfplumber.open(file_path) as pdf:
