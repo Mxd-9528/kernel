@@ -1,24 +1,28 @@
-"""预置函数 read：读文件，返回带行号的三元组 Result。
+"""预置函数 read：读文件，返回带位置锚点的三元组 Result。
 
-支持：cat -n 行号（模型靠行号定位）、offset/limit 部分读、错误分类
-（目录/权限/编码/不存在），失败进 .error 不抛。截断用 lazy 版（超行数截尾+提示），
-不搬 40/20/40——文件从头读，截尾足够；等大输出分流再上完整截断。
+支持：文本文件（带行号）、PDF 文件（带页码）、offset/limit 部分读。
+失败进 .error 不抛。超长输出由 Result 自动截断（5 万字符，40/20/40 策略）。
 """
 
 from result import Result
 
-_MAX_LINES = 2000  # ponytail: 超此行数截尾
-
 
 def read(file_path, offset=None, limit=None):
-    """读文件，返回带行号（`数字+tab`）的文本。offset（起始行，从1计）、limit（最大行数）可选，支持部分读。
+    """读文件，返回带行号（文本）或页码（PDF）的内容。
 
-    行号是显示用的，不在文件里。把内容复制给 edit 的 old_string 时，只复制行号后的原文。
+    offset/limit：对文本是行，对 PDF 是页，均从 1 开始计数。
+    行号/页码是显示用的，不在文件里。复制给 edit 时只复制原文部分。
     """
+    if file_path.lower().endswith(".pdf"):
+        return _read_pdf(file_path, offset, limit)
+    return _read_text(file_path, offset, limit)
+
+
+def _read_text(file_path, offset=None, limit=None):
     import os
-    if os.path.isdir(file_path):  # 跨平台：Windows 打开目录抛 PermissionError 而非 IsADirectoryError
+    if os.path.isdir(file_path):
         e = IsADirectoryError(file_path)
-        return Result(f"路径是目录，read 仅支持文本文件：{file_path}", error=e, file_path=file_path, lines=0)
+        return Result(f"路径是目录，read 仅支持文件：{file_path}", error=e, file_path=file_path, lines=0)
     try:
         with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
@@ -34,11 +38,7 @@ def read(file_path, offset=None, limit=None):
     chunk = lines[start:end]
     line_start = start + 1
 
-    truncated = len(chunk) > _MAX_LINES
-    shown = chunk[:_MAX_LINES]
-    body = "".join(f"{line_start + i}\t{line}" for i, line in enumerate(shown))
-    if truncated:
-        body += f"\n... [已截断，共 {len(chunk)} 行，仅显示前 {_MAX_LINES} 行，用 offset/limit 读其余]"
+    body = "".join(f"{line_start + i}\t{line}" for i, line in enumerate(chunk))
 
     n = len(chunk)
     return Result(
@@ -49,5 +49,42 @@ def read(file_path, offset=None, limit=None):
         line_start=line_start,
         line_end=line_start + n - 1 if n else line_start - 1,
         bytes=len("".join(chunk).encode("utf-8")),
-        truncated=truncated,
     )
+
+
+def _read_pdf(file_path, offset=None, limit=None):
+    try:
+        import pdfplumber
+    except ImportError:
+        return Result(
+            "读取 PDF 需要 pdfplumber 支持，请执行：pip install pdfplumber",
+            error=ImportError("pdfplumber not installed"),
+            file_path=file_path,
+            pages=0,
+        )
+
+    try:
+        with pdfplumber.open(file_path) as pdf:
+            total = len(pdf.pages)
+            start = (offset or 1) - 1
+            end = start + limit if limit is not None else total
+            pages = pdf.pages[start:end]
+
+            parts = []
+            for i, page in enumerate(pages):
+                text = page.extract_text() or ""
+                if text:
+                    parts.append(f"=== 第 {start + 1 + i} 页 ===\n{text}\n\n")
+
+            body = "".join(parts)
+            return Result(
+                body,
+                error=None,
+                file_path=file_path,
+                pages=total,
+                page_start=start + 1,
+                page_end=end,
+                pages_read=len(pages),
+            )
+    except Exception as e:
+        return Result(f"读取 PDF 失败：{e}", error=e, file_path=file_path, pages=0)

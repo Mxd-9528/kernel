@@ -6,15 +6,43 @@
 
 对齐设计：error= 强制必填，逼调用方显式表态成功/失败，杜绝忘设 error 的静默成功。
 facts 既整体挂在 .facts，又每个 key setattr 成属性，两种取法都行。
+
+自动截断：所有 Result body 超过 2 万字符时自动按 40/20/40 策略截断，防止爆 token。
 """
 
 _ERROR_REQUIRED = "error= 必填；成功传 None"
+_MAX_BODY = 20000  # 2 万字符 ≈ 5000 token，安全距离（约 1300 行普通代码）
 
 
-def _attach(obj, facts):
+def _truncate_402040(s: str, limit: int = _MAX_BODY) -> tuple:
+    """40/20/40 三段截断：头/中/尾各保留 40%/20%/40%，返回 (截断后文本, 是否截断)。"""
+    if len(s) <= limit:
+        return s, False
+
+    head_n = int(limit * 0.4)
+    middle_n = int(limit * 0.2)
+    tail_n = limit - head_n - middle_n
+
+    head = s[:head_n]
+    middle_start = (len(s) - middle_n) // 2
+    middle = s[middle_start:middle_start + middle_n]
+    tail = s[-tail_n:]
+
+    truncated = (
+        f"{head}\n"
+        f"\n[... 截断 {len(s) - limit:,} 字符，保留头/中/尾各 40%/20%/40% ...]\n\n"
+        f"{middle}\n"
+        f"\n[... 截断继续 ...]\n\n"
+        f"{tail}"
+    )
+    return truncated, True
+
+
+def _attach(obj, facts, truncated=False):
     if "error" not in facts:
         raise TypeError(_ERROR_REQUIRED)
     obj.error = facts.pop("error")
+    facts["truncated"] = truncated  # 统一标记：是否被截断过
     obj.facts = facts
     for k, v in facts.items():
         setattr(obj, k, v)
@@ -34,10 +62,11 @@ def _repr(obj, body_text):
 
 
 class Result(str):
-    """Body 是字符串的三元组结果。"""
+    """Body 是字符串的三元组结果。超过 5 万字符自动按 40/20/40 截断。"""
 
     def __new__(cls, body="", **facts):
-        return _attach(str.__new__(cls, body), facts)
+        body, truncated = _truncate_402040(str(body))
+        return _attach(str.__new__(cls, body), facts, truncated)
 
     def __repr__(self):
         return _repr(self, str(self))
