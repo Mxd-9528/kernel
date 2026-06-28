@@ -26,20 +26,12 @@ def help_text():
     return builtin
 
 
-def _run_prompt_mode(prompt_file, user_input, model):
-    """运行一个提示词模式。"""
-    prompt = (Path(__file__).parent / "prompts" / prompt_file).read_text("utf-8")
-    import agent as agent_mod
-    agent_mod._stop = False
-    result, _ = agent_mod.agent(user_input, [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": user_input},
-    ], model)
-    return result
-
-
 def handle(cmd, model, messages):
-    """处理斜杠命令。不是命令返回 handled=False。"""
+    """处理斜杠命令。不是命令返回 handled=False。
+
+    架构原则：只组装 prompt 字符串，不碰 messages 结构，
+    messages 的组织完全由 agent() 主循环负责。
+    """
     if not cmd.startswith("/"):
         return messages, model, None, False
 
@@ -71,9 +63,13 @@ def handle(cmd, model, messages):
         for f in prompt_dir.glob("*.txt"):
             trigger = f"/{f.stem}"
             if cmd.startswith(trigger):
+                import agent as agent_mod
+                prompt = (Path(__file__).parent / "prompts" / f.name).read_text("utf-8")
                 question = cmd[len(trigger):].strip() or "请执行对应任务"
-                _run_prompt_mode(f.name, question, model)
-                return messages, model, f"（{f.stem} 模式）", True
+                full_prompt = question + "\n\n执行以下约束：\n\n" + prompt
+                agent_mod._stop = False
+                result, new_messages = agent_mod.agent(full_prompt, messages, model)
+                return new_messages, model, None, True
 
     # 未知命令
     return messages, model, f"未知命令：{cmd}，输入 /help 查看所有可用命令", True
