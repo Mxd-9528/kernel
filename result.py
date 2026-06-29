@@ -38,11 +38,10 @@ def _truncate_402040(s: str, limit: int = _MAX_BODY) -> tuple:
     return truncated, True
 
 
-def _attach(obj, facts, truncated=False):
+def _attach(obj, facts):
     if "error" not in facts:
         raise TypeError(_ERROR_REQUIRED)
     obj.error = facts.pop("error")
-    facts["truncated"] = truncated  # 统一标记：是否被截断过
     obj.facts = facts
     for k, v in facts.items():
         setattr(obj, k, v)
@@ -52,9 +51,13 @@ def _attach(obj, facts, truncated=False):
 def _repr(obj, body_text):
     # 原样转达三元组：Body + error（非 None 才显示）+ facts 整字典倒出，不挑字段。
     # run() 对表达式值调 repr()，所以这里就是三元组到达模型的坍缩点。
+    # ponytail: 统一在此截断——所有 Result 类型的 repr 都经过这里，不用每个类单独改。
+    body_text, truncated = _truncate_402040(body_text)
     parts = [body_text]
     if obj.error is not None:
         parts.append(f"error={obj.error!r}")
+    if truncated:
+        parts.append(f"truncated=True")
     facts = "  ".join(f"{k}={v!r}" for k, v in obj.facts.items())
     if facts:
         parts.append(facts)
@@ -62,11 +65,12 @@ def _repr(obj, body_text):
 
 
 class Result(str):
-    """Body 是字符串的三元组结果。超过 5 万字符自动按 40/20/40 截断。"""
+    """Body 是字符串的三元组结果。所有类型统一在 _repr 处截断。"""
 
     def __new__(cls, body="", **facts):
-        body, truncated = _truncate_402040(str(body))
-        return _attach(str.__new__(cls, body), facts, truncated)
+        obj = str.__new__(cls, str(body))
+        _attach(obj, facts)
+        return obj
 
     def __repr__(self):
         return _repr(self, str(self))

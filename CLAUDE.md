@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **不是工具调用范式**——预置函数只是预加载进内核命名空间的普通 Python 函数，模型拿来就用，不够用直接写标准库。
 
+**统一命名空间公理**：整个系统是单一持久 IPython 命名空间的自举集合。项目模块、预置函数、模型生成代码三者无本质区别，均为命名空间一等公民，可被 inspect、redefine、introspect，无特权层与不可见边界。
+
 ## 命令速查
 
 ```bash
