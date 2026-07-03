@@ -45,7 +45,7 @@ def _run_cell(code):
 
 
 def run(code):
-    from background import run_with_timeout
+    from background_contract import run_with_timeout
     from result import Result
 
     result, timeout_error, task_id = run_with_timeout(_run_cell, _TIMEOUT, code)

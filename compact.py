@@ -5,6 +5,8 @@
 触发用字符数估算（粗略但够；token 精确但要 tokenizer，YAGNI）。
 """
 
+from call_contract import call
+
 KEEP_ROUNDS = 6       # 保留最近几轮完整对话（数 assistant）
 THRESHOLD = 50_000    # 中间可压部分超过多少字符就触发
 
@@ -81,12 +83,12 @@ def should_compact(history, keep=KEEP_ROUNDS, threshold=THRESHOLD):
     return bool(mid) and _chars(mid) > threshold
 
 
-def compact(history, keep=KEEP_ROUNDS, call_compress=None):
-    """压缩 history：摘要中间部分，作 user/assistant 对插回。call_compress(messages)->摘要文本。"""
+def compact(history, keep=KEEP_ROUNDS, model=None):
+    """压缩 history：摘要中间部分，作 user/assistant 对插回。model 用于调用压缩 LLM。"""
     system, mid, recent = split_history(history, keep)
     if not mid:
         return history
-    summary = call_compress(mid)
+    summary = compress(mid, model, call)
     bridge = [
         {"role": "user", "content": "（以下是已压缩的旧上下文摘要）"},
         {"role": "assistant", "content": summary},

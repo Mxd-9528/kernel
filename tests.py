@@ -287,6 +287,13 @@ if __name__ == "__main__":
     test_history()
     test_skills()
     test_compact()
+    # 合同签名一致性：call_contract 沉淀线不漂移
+    import inspect, call, call_contract
+    assert inspect.signature(call.call) == inspect.signature(call_contract.call), "call_contract 签名漂移"
+    import background, background_contract
+    for fn in ("run_with_timeout", "task_status", "task_cancel"):
+        assert inspect.signature(getattr(background, fn)) == inspect.signature(getattr(background_contract, fn)), f"background_contract.{fn} 签名漂移"
+    print("contract ok")
     import tests_tools
     tests_tools.run_all()
     print("全部通过")

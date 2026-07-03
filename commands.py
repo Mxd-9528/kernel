@@ -20,7 +20,7 @@ def help_text():
         prompts = sorted([f.stem for f in prompt_dir.glob("*.txt")])
         if prompts:
             builtin += "\n\n提示词命令：\n"
-            builtin += "\n".join(f"  /{p:<14} {p} 模式" for p in prompts)
+            builtin += "\n".join(f"  /{p.split('_')[0]:<14} {p.split('_')[1] if '_' in p else f'{p} 模式'}" for p in prompts)
 
     builtin += "\n  exit           退出"
     return builtin
@@ -61,7 +61,7 @@ def handle(cmd, model, messages):
     prompt_dir = Path(__file__).parent / "prompts"
     if prompt_dir.exists():
         for f in prompt_dir.glob("*.txt"):
-            trigger = f"/{f.stem}"
+            trigger = f"/{f.stem.split('_')[0]}"
             if cmd.startswith(trigger):
                 import agent as agent_mod
                 prompt = (Path(__file__).parent / "prompts" / f.name).read_text("utf-8")

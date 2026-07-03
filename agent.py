@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from call import call
-from compact import should_compact, compact, compress
+from call_contract import call
+from compact import should_compact, compact
 from extract import extract
 from history import save
 from rich.console import Console
@@ -52,7 +52,7 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         if _stop:
             break  # chat 按了 Ctrl+C，回到输入
         if should_compact(messages):
-            messages = compact(messages, call_compress=lambda mid: compress(mid, model, call))
+            messages = compact(messages, model=model)
         reply = call(messages, model)
         render(reply)
         messages.append({"role": "assistant", "content": reply})

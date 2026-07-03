@@ -16,7 +16,7 @@ def chat(model=None):
     """
     signal.signal(signal.SIGINT, _handle_sigint)
     import agent as agent_mod
-    from call import default_model
+    from call_contract import default_model
     from commands import handle
     from history import save, load
 
