@@ -82,24 +82,24 @@ def test_agent():
         '答案是 2，再算一个：\n<!EXEC>\n```python\nx = 3 * 4\nprint(x)\n```\n</EXEC>',
         '做完了，结果是 12。',
     ])
-    import call as call_mod
-    original = call_mod.call
-    call_mod.call = lambda *a, **kw: next(fake_replies)
+    import agent as agent_mod
+    original = agent_mod.call
+    agent_mod.call = lambda *a, **kw: next(fake_replies)
     try:
         result, _ = agent("测试：算 1+1，再算 3*4")
         assert result == "做完了，结果是 12。", repr(result)
         print("agent ok")
     finally:
-        call_mod.call = original
+        agent_mod.call = original
 
 
 def test_manifest():
-    from manifest import presets, describe
+    from manifest import presets, list_tools
     # 扫 tools/：每个 tools/x.py 的同名函数 x 就是预置函数
     names = {name for name, _ in presets()}
     assert "read" in names  # read.py 在 tools/ 里，必被扫到
     # 描述含函数名、签名、docstring 首行；不手写 schema，全自省
-    text = describe()
+    text = list_tools()
     assert "read(file_path, offset=None, limit=None)" in text
     assert "读文件" in text  # docstring 来自 read.__doc__
     print("manifest ok")
@@ -118,6 +118,34 @@ def test_inject():
     assert run("glob('x')") == "'热补丁版'", "重绑被 inject 覆盖了——持久性被破坏"
     run("from tools.glob import glob")  # 还原成真 glob，避免污染后续测试
     print("inject ok")
+
+
+def test_inject_sentinel():
+    # 哨兵机制专项：不依赖任何工具名，纯粹验证"已注入"的标记
+    from inject import inject
+    class FakeShell:
+        def __init__(self):
+            self.user_ns = {}
+            self.pushed = 0
+        def push(self, ns):
+            self.pushed += 1
+            self.user_ns.update(ns)
+
+    sh = FakeShell()
+    inject(sh)
+    assert sh.pushed == 1, "首次应注入"
+    assert getattr(sh, "_kernel_injected", False) is True, "哨兵未打标记"
+
+    # 二次调用应被拦截——即使 user_ns 里没有任何工具名
+    sh.user_ns.clear()  # 模拟工具改名/删除的极端情况
+    inject(sh)
+    assert sh.pushed == 1, "哨兵失效：user_ns 空也重注入了"
+
+    # 全新 shell 无哨兵，才会注入
+    sh2 = FakeShell()
+    inject(sh2)
+    assert sh2.pushed == 1
+    print("inject sentinel ok")
 
 
 def test_feedback():
@@ -145,7 +173,7 @@ def test_build_system():
     sys = build_system()
     # 含 prompt.txt 内容 + 预置函数清单（manifest 自动拼）
     assert "预置函数" in sys
-    assert "read(file_path" in sys  # describe() 的产物
+    assert "read(file_path" in sys  # list_tools() 的产物
     print("build_system ok")
 
 
@@ -186,7 +214,7 @@ def test_skills():
     import tempfile
     import os
     import shutil
-    from skills import skills, describe_skills
+    from skills import skills, list_skills
     d = tempfile.mkdtemp()
     # 造两个 skill：标准 frontmatter
     os.makedirs(os.path.join(d, "foo"))
@@ -206,21 +234,21 @@ def test_skills():
     assert got["foo"] == "做 foo 的事" and got["bar"] == "做 bar 的事"
     assert "第一行" in got["baz"] and "第二行" in got["baz"], got["baz"]  # 多行被正确合并
 
-    # describe_skills：含名字、描述、和「按需 read」的引导
-    text = describe_skills(d)
+    # list_skills：含名字、描述、和「按需 read」的引导
+    text = list_skills(d)
     assert "foo" in text and "做 foo 的事" in text
     assert "SKILL.md" in text  # 告诉模型去哪 read
 
     # 没有 skills 目录：返回空，不崩
     assert skills(os.path.join(d, "nonexistent")) == []
-    assert describe_skills(os.path.join(d, "nonexistent")) == ""
+    assert list_skills(os.path.join(d, "nonexistent")) == ""
 
     shutil.rmtree(d)
     print("skills ok")
 
 
 def test_compact():
-    from compact import split_history, should_compact, compact
+    from _compact import split_history, should_compact, compact
 
     def conv(n):
         # 造 n 轮对话：每轮 user + assistant
@@ -251,7 +279,13 @@ def test_compact():
 
     # compact：mock 压缩 API，验证重组结构
     h = conv(10)
-    new = compact(h, keep=6, call_compress=lambda msgs: "【摘要】")
+    import _compact as compact_mod
+    original_call = compact_mod.call
+    compact_mod.call = lambda msgs, model: "【摘要】"
+    try:
+        new = compact(h, keep=6)
+    finally:
+        compact_mod.call = original_call
     assert new[0] == {"role": "system", "content": "sys"}  # system 保留
     # 摘要作为 user/assistant 对插入
     assert any(m["role"] == "assistant" and "【摘要】" in m["content"] for m in new)
@@ -261,13 +295,17 @@ def test_compact():
 
     # compress：拼压缩请求（这次提出来才能测——COMPRESS_PROMPT 拼装 + 序列化）
     import json
-    from compact import compress, COMPRESS_PROMPT
+    from _compact import compress, COMPRESS_PROMPT
     captured = {}
     def fake_call(msgs, model):
         captured["msgs"], captured["model"] = msgs, model
         return "压缩结果"
     mid = [{"role": "user", "content": "u0"}, {"role": "assistant", "content": "a0"}]
-    out = compress(mid, "ark-code", fake_call)
+    compact_mod.call = fake_call
+    try:
+        out = compress(mid, "ark-code")
+    finally:
+        compact_mod.call = original_call
     assert out == "压缩结果"
     assert captured["model"] == "ark-code"  # 用传入的 model
     assert captured["msgs"][0] == {"role": "system", "content": COMPRESS_PROMPT}  # system=压缩prompt
@@ -282,17 +320,35 @@ if __name__ == "__main__":
     test_agent()
     test_manifest()
     test_inject()
+    test_inject_sentinel()
     test_feedback()
     test_build_system()
     test_history()
     test_skills()
     test_compact()
-    # 合同签名一致性：call_contract 沉淀线不漂移
-    import inspect, call, call_contract
-    assert inspect.signature(call.call) == inspect.signature(call_contract.call), "call_contract 签名漂移"
-    import background, background_contract
+    # 接口 = 实现的 re-export：签名一致 = 同一对象。
+    import call, _call, background, _background, compact, _compact, run, _run
+    assert call.call is _call.call, "call 接口漂移"
+    assert call.default_model is _call.default_model, "call.default_model 接口漂移"
     for fn in ("run_with_timeout", "task_status", "task_cancel"):
-        assert inspect.signature(getattr(background, fn)) == inspect.signature(getattr(background_contract, fn)), f"background_contract.{fn} 签名漂移"
+        assert getattr(background, fn) is getattr(_background, fn), f"background.{fn} 接口漂移"
+    for fn in ("should_compact", "compact"):
+        assert getattr(compact, fn) is getattr(_compact, fn), f"compact.{fn} 接口漂移"
+    assert run.run is _run.run, "run 接口漂移"
+    # 视野即依赖：上游源码不应出现 _* 实现模块名（认知链不穿透接口）。
+    from pathlib import Path
+    exempt = {"_call.py", "call.py", "_background.py", "background.py",
+              "_compact.py", "compact.py", "_run.py", "run.py",
+              "tests.py"}  # 实现自身、接口（转手）、测试跨水线特权
+    for src in Path(".").glob("*.py"):
+        if src.name in exempt:
+            continue
+        text = src.read_text("utf-8")
+        for name in ("_call", "_background", "_compact", "_run"):
+            assert "from {} import".format(name) not in text, f"{src.name} 认知链穿透 {name}"
+            # 裸 import：拦 "import _xxx" 后接空白/逗号/行尾（"import _call_stub" 不误伤——不同名）
+            import re
+            assert not re.search(r"(?m)^\s*import\s+{}(?:\s|,|$)".format(re.escape(name)), text), f"{src.name} 认知链穿透 {name}"
     print("contract ok")
     import tests_tools
     tests_tools.run_all()

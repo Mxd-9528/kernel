@@ -5,7 +5,7 @@ wait: None=不续等直接返回，正数=最多续等N秒
 任务完成时 result_path 字段含结果文件路径，用 read() 读取。
 """
 
-from background_contract import task_status as _task_status
+from background import task_status as _task_status
 
 
 def task_status(task_id, wait=None):

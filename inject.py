@@ -21,9 +21,10 @@ def inject(shell):
     """首轮把机件和预置函数推进 user_ns。已注入则跳过——不覆盖模型在内核里的重绑定。
 
     每轮重 push 会抹掉模型对预置函数的改进，毁掉持久内核"跨轮保留"的核心优势。
-    所以只注入一次：用真实预置函数名做哨兵，比单独的标记位健壮。
+    专属哨兵挂在 shell 上，不依赖任何工具名——工具改名/删除也不会静默重注入。
     （代价：会话中新加 tools/ 文件需重启 chat 才生效——加工具本就改文件，可接受。）
     """
-    if "read" in shell.user_ns:  # 已注入过
+    if getattr(shell, "_kernel_injected", False):
         return
     shell.push(_names())
+    shell._kernel_injected = True

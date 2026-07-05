@@ -4,7 +4,7 @@ import signal
 
 def _handle_sigint(signum, frame):
     import agent as agent_mod
-    agent_mod._stop = True
+    agent_mod.request_stop()
 
 
 def chat(model=None):
@@ -16,7 +16,7 @@ def chat(model=None):
     """
     signal.signal(signal.SIGINT, _handle_sigint)
     import agent as agent_mod
-    from call_contract import default_model
+    from call import default_model
     from commands import handle
     from history import save, load
 
@@ -37,11 +37,11 @@ def chat(model=None):
                 print(resp)
             continue
 
-        agent_mod._stop = False
+        agent_mod.clear_stop()
         result, messages = agent_mod.agent(you, messages, model)
-        if agent_mod._stop:
+        if agent_mod.should_stop():
             print("\n（已停止）")
-            agent_mod._stop = False
+            agent_mod.clear_stop()
 
 
 if __name__ == "__main__":

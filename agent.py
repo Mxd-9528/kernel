@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from call_contract import call
+from call import call
 from compact import should_compact, compact
 from extract import extract
 from history import save
@@ -12,7 +12,27 @@ from run import run
 # 代码块就是没预先写好的预置函数，执行和捕获走同一条路径，返回同一套三元组。
 
 _MAX_ITERS = 20
-_stop = False  # chat 按 Ctrl+C 时设 True，agent 下次 call 前跳过
+
+# 中断协议（协作式，不打断 IPython 单元）：
+#   request_stop() → 外部要求停下（Ctrl+C / 命令切换）
+#   clear_stop()   → 新任务开始前清零
+#   should_stop()  → 循环边界检查
+# 内部标志用 _stop，外部只调三个函数——不摸变量。
+_stop = False
+
+
+def request_stop():
+    global _stop
+    _stop = True
+
+
+def clear_stop():
+    global _stop
+    _stop = False
+
+
+def should_stop():
+    return _stop
 
 
 # 系统提示组装逻辑已移至 system_prompt.py，避免本文件膨胀
@@ -48,6 +68,7 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         messages = [{"role": "system", "content": build_system()}]
     messages.append({"role": "user", "content": prompt})
 
+    reply = ""
     for _ in range(max_iters):
         if _stop:
             break  # chat 按了 Ctrl+C，回到输入
@@ -67,4 +88,4 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         save(messages)  # 步级存盘：环境反馈即落盘
 
     # 到达最大轮数或被 _stop 打断
-    return reply if "reply" in dir() else "", messages
+    return reply, messages

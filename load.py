@@ -1,7 +1,8 @@
 
 # 把机件摆上 IPython 命名空间。预置函数（tools/）由 manifest 扫描、inject 注入，不在这里手写。
-from call_contract import call  # 沉淀线：读 call_contract.py 即知全部对外行为
-import background_contract  # 沉淀线：后台任务合同（run_with_timeout / task_status / task_cancel）
+# 面向接口编程：一律 import 无前缀的接口模块（call/background/compact/run），实现在 _*.py 水线以下。
+from call import call
+import background
 from extract import extract
 from result import Result, ListResult, DictResult
 from run import run

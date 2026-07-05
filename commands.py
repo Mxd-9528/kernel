@@ -67,7 +67,7 @@ def handle(cmd, model, messages):
                 prompt = (Path(__file__).parent / "prompts" / f.name).read_text("utf-8")
                 question = cmd[len(trigger):].strip() or "请执行对应任务"
                 full_prompt = question + "\n\n执行以下约束：\n\n" + prompt
-                agent_mod._stop = False
+                agent_mod.clear_stop()
                 result, new_messages = agent_mod.agent(full_prompt, messages, model)
                 return new_messages, model, None, True
 
