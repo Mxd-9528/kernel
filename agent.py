@@ -1,12 +1,15 @@
+import threading
 from pathlib import Path
 
 from call import call
-from compact import should_compact, compact
+from compact import compact
 from extract import extract
 from history import save
+from manifest import list_tools
 from rich.console import Console
 from rich.markdown import Markdown
 from run import run
+from skills import list_skills
 
 # B 闭环：模型自己在持久内核里干活——回代码 → 执行 → 喂结果 → 再回代码 → 直到它说"做完了"。
 # 代码块就是没预先写好的预置函数，执行和捕获走同一条路径，返回同一套三元组。
@@ -14,29 +17,24 @@ from run import run
 _MAX_ITERS = 20
 
 # 中断协议（协作式，不打断 IPython 单元）：
-#   request_stop() → 外部要求停下（Ctrl+C / 命令切换）
-#   clear_stop()   → 新任务开始前清零
-#   should_stop()  → 循环边界检查
-# 内部标志用 _stop，外部只调三个函数——不摸变量。
-_stop = False
+#   stop.set()    外部要求停下（Ctrl+C / 命令切换）
+#   stop.clear()  新任务开始前清零
+#   stop.is_set() 循环边界检查
+stop = threading.Event()
 
 
-def request_stop():
-    global _stop
-    _stop = True
-
-
-def clear_stop():
-    global _stop
-    _stop = False
-
-
-def should_stop():
-    return _stop
-
-
-# 系统提示组装逻辑已移至 system_prompt.py，避免本文件膨胀
-from system_prompt import build as build_system
+def build_system():
+    """组装完整系统提示词：prompt.txt + 预置函数清单 + 技能清单 + 可选 system_append.txt。"""
+    here = Path(__file__).parent
+    out = (here / "prompt.txt").read_text("utf-8") + \
+          "\n\n# 预置函数（已注入命名空间，直接调用，无需 import）\n\n" + list_tools()
+    sk = list_skills()
+    if sk:
+        out += "\n\n# 技能\n\n" + sk
+    append_path = here / "system_append.txt"
+    if append_path.exists():
+        out += "\n\n" + append_path.read_text("utf-8")
+    return out
 
 
 def render(reply):
@@ -70,10 +68,9 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
 
     reply = ""
     for _ in range(max_iters):
-        if _stop:
+        if stop.is_set():
             break  # chat 按了 Ctrl+C，回到输入
-        if should_compact(messages):
-            messages = compact(messages, model=model)
+        messages = compact(messages, model=model)
         reply = call(messages, model)
         render(reply)
         messages.append({"role": "assistant", "content": reply})
@@ -87,5 +84,5 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         messages.append({"role": "user", "content": feedback(results)})
         save(messages)  # 步级存盘：环境反馈即落盘
 
-    # 到达最大轮数或被 _stop 打断
+    # 到达最大轮数或被 stop 打断
     return reply, messages

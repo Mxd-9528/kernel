@@ -4,7 +4,7 @@ import signal
 
 def _handle_sigint(signum, frame):
     import agent as agent_mod
-    agent_mod.request_stop()
+    agent_mod.stop.set()
 
 
 def chat(model=None):
@@ -17,8 +17,8 @@ def chat(model=None):
     signal.signal(signal.SIGINT, _handle_sigint)
     import agent as agent_mod
     from call import default_model
-    from commands import handle
-    from history import save, load
+    from commands import handle_config
+    from history import load
 
     model = model or default_model()
     messages = load()  # 自动接续上次对话；无历史则 None
@@ -30,18 +30,25 @@ def chat(model=None):
         if you == "exit":
             break
 
-        # 处理斜杠命令
-        messages, model, resp, handled = handle(you, model, messages)
-        if handled:
+        # 配置命令：只改 REPL 状态
+        cfg = handle_config(you, model, messages)
+        if cfg is not None:
+            messages, model, resp = cfg
             if resp:
                 print(resp)
             continue
 
-        agent_mod.clear_stop()
+        # 未知斜杠命令：兜底提示，不发给 agent 浪费调用
+        if you.startswith("/"):
+            print(f"未知命令：{you}，输入 /help 查看所有可用命令")
+            continue
+
+        # 自由文本：进入 agent
+        agent_mod.stop.clear()
         result, messages = agent_mod.agent(you, messages, model)
-        if agent_mod.should_stop():
+        if agent_mod.stop.is_set():
             print("\n（已停止）")
-            agent_mod.clear_stop()
+            agent_mod.stop.clear()
 
 
 if __name__ == "__main__":

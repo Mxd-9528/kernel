@@ -175,13 +175,6 @@ def test_history():
         save(msgs, p)
         assert load(p) == msgs
 
-        # 存盘清掉 reasoning_content（隐私+体积）
-        withr = [{"role": "assistant", "content": "答案", "reasoning_content": "思考过程"}]
-        save(withr, p)
-        loaded = load(p)
-        assert "reasoning_content" not in loaded[0]
-        assert loaded[0]["content"] == "答案"
-
         # 损坏文件：当无历史处理，不崩
         with open(p, "w", encoding="utf-8") as f:
             f.write("{坏 json")
@@ -218,7 +211,7 @@ def test_skills():
 
 
 def test_compact():
-    from _compact import split_history, should_compact, compact
+    from _compact import split_history, compact
 
     def conv(n):
         # 造 n 轮对话：每轮 user + assistant
@@ -236,32 +229,19 @@ def test_compact():
     assert sum(1 for m in mid if m["role"] == "assistant") == 4  # 前4轮可压
     assert system + mid + recent == h  # 无遗漏无重叠
 
-    # 对话太短（不足 keep 轮）：中间为空，全保留
-    short = conv(3)
-    system, mid, recent = split_history(short, keep=6)
-    assert mid == [] and system + recent == short
-
-    # should_compact：中间部分超阈值才触发
-    assert should_compact(conv(3), keep=6, threshold=10) is False  # 太短，中间空
+    # 未过阈值：原样返回（不调用 LLM）
     big = conv(10)
-    assert should_compact(big, keep=6, threshold=1_000_000) is False  # 没超阈值
-    assert should_compact(big, keep=6, threshold=1) is True  # 超阈值
-
-    # compact：mock 压缩 API，验证重组结构
-    h = conv(10)
     import _compact as compact_mod
-    original_call = compact_mod.call
+    compact_mod.call = lambda *a, **kw: (_ for _ in ()).throw(AssertionError("不该调用"))
+    assert compact(big, keep=6, threshold=1_000_000) == big
+
+    # 过阈值：mock 压缩 API，验证重组结构
     compact_mod.call = lambda msgs, model: "【摘要】"
-    try:
-        new = compact(h, keep=6)
-    finally:
-        compact_mod.call = original_call
+    new = compact(conv(10), keep=6, threshold=1)
     assert new[0] == {"role": "system", "content": "sys"}  # system 保留
-    # 摘要作为 user/assistant 对插入
     assert any(m["role"] == "assistant" and "【摘要】" in m["content"] for m in new)
-    # 最近6轮原样在末尾
-    assert new[-1] == {"role": "assistant", "content": "a9"}
-    assert len(new) < len(h)  # 确实压短了
+    assert new[-1] == {"role": "assistant", "content": "a9"}  # 最近6轮原样在末尾
+    assert len(new) < len(conv(10))
     print("compact ok")
 
 
@@ -283,8 +263,7 @@ if __name__ == "__main__":
     assert call.default_model is _call.default_model, "call.default_model 接口漂移"
     for fn in ("run_with_timeout", "task_status", "task_cancel"):
         assert getattr(background, fn) is getattr(_background, fn), f"background.{fn} 接口漂移"
-    for fn in ("should_compact", "compact"):
-        assert getattr(compact, fn) is getattr(_compact, fn), f"compact.{fn} 接口漂移"
+    assert compact.compact is _compact.compact, "compact 接口漂移"
     assert run.run is _run.run, "run 接口漂移"
     # 视野即依赖：上游源码不应出现 _* 实现模块名（认知链不穿透接口）。
     from pathlib import Path

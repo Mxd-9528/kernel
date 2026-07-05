@@ -77,16 +77,11 @@ def split_history(history, keep=KEEP_ROUNDS):
     return system, conv[:split], conv[split:]
 
 
-def should_compact(history, keep=KEEP_ROUNDS, threshold=THRESHOLD):
-    """中间可压部分的字符数是否超阈值。"""
-    _, mid, _ = split_history(history, keep)
-    return bool(mid) and _chars(mid) > threshold
-
-
-def compact(history, keep=KEEP_ROUNDS, model=None):
-    """压缩 history：摘要中间部分，作 user/assistant 对插回。model 用于调用压缩 LLM。"""
+def compact(history, keep=KEEP_ROUNDS, threshold=THRESHOLD, model=None):
+    """压缩 history：中间部分字符数超 threshold 才压。未达阈值原样返回。
+    压缩时摘要中间部分，作 user/assistant 对插回。model 用于调用压缩 LLM。"""
     system, mid, recent = split_history(history, keep)
-    if not mid:
+    if not mid or _chars(mid) <= threshold:
         return history
     summary = compress(mid, model)
     bridge = [
