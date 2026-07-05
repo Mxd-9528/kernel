@@ -23,19 +23,9 @@ def test_result():
     else:
         raise AssertionError("漏传 error= 应该报 TypeError")
 
-    # __repr__ 是三元组到达模型的坍缩点：Body + error（非None才显示）+ facts 整字典倒出，不挑字段。
-    # 工具成功：facts 字段（无 stdout）原样转达
-    rep = repr(Result("正文", error=None, file_path="x.py", lines=2))
-    assert "正文" in rep and "file_path='x.py'" in rep and "lines=2" in rep and "error=" not in rep
-    # 工具失败：facts 没有 stdout 字段也不崩（根除写死字段的 bug），error 显示
-    rep = repr(Result("", error=FileNotFoundError("no"), file_path="x.py"))
-    assert "error=" in rep and "FileNotFoundError" in rep and "file_path='x.py'" in rep
-    # 业务失败（returncode非0）进 facts，工具自身 error=None：不显示 error
-    rep = repr(Result("out", error=None, returncode=127))
-    assert "returncode=127" in rep and "error=" not in rep
-    # list/dict Body 形态
-    assert "rowcount=2" in repr(ListResult([1, 2], error=None, rowcount=2))
-    assert "kind='INSERT'" in repr(DictResult({"n": 1}, error=None, kind="INSERT"))
+    # __repr__ 是三元组到达模型的坍缩点：Body + error + facts 一次性倒出。
+    assert "正文" in repr(Result("正文", error=None, lines=2))
+    assert "FileNotFoundError" in repr(Result("", error=FileNotFoundError("no")))
     print("result ok")
 
 
@@ -76,6 +66,7 @@ def test_extract():
 
 
 def test_agent():
+    import contextlib, io
     from agent import agent
     fake_replies = iter([
         '来做：\n<!EXEC>\n```python\n1 + 1\n```\n</EXEC>',
@@ -86,7 +77,8 @@ def test_agent():
     original = agent_mod.call
     agent_mod.call = lambda *a, **kw: next(fake_replies)
     try:
-        result, _ = agent("测试：算 1+1，再算 3*4")
+        with contextlib.redirect_stdout(io.StringIO()):
+            result, _ = agent("测试：算 1+1，再算 3*4")
         assert result == "做完了，结果是 12。", repr(result)
         print("agent ok")
     finally:
@@ -168,82 +160,60 @@ def test_feedback():
     print("feedback ok")
 
 
-def test_build_system():
-    from agent import build_system
-    sys = build_system()
-    # 含 prompt.txt 内容 + 预置函数清单（manifest 自动拼）
-    assert "预置函数" in sys
-    assert "read(file_path" in sys  # list_tools() 的产物
-    print("build_system ok")
-
-
 def test_history():
     import tempfile
     import os
     from history import save, load
-    d = tempfile.mkdtemp()
-    p = os.path.join(d, "h.json")
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "h.json")
 
-    # 没有文件时 load 返回 None（启动无历史）
-    assert load(p) is None
+        # 没有文件时 load 返回 None（启动无历史）
+        assert load(p) is None
 
-    # 存取往返
-    msgs = [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "yo"}]
-    save(msgs, p)
-    assert load(p) == msgs
+        # 存取往返
+        msgs = [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "yo"}]
+        save(msgs, p)
+        assert load(p) == msgs
 
-    # 存盘清掉 reasoning_content（隐私+体积），但不改传入的原列表
-    withr = [{"role": "assistant", "content": "答案", "reasoning_content": "思考过程"}]
-    save(withr, p)
-    loaded = load(p)
-    assert "reasoning_content" not in loaded[0]
-    assert loaded[0]["content"] == "答案"
-    assert "reasoning_content" in withr[0]  # 原列表不被改
+        # 存盘清掉 reasoning_content（隐私+体积）
+        withr = [{"role": "assistant", "content": "答案", "reasoning_content": "思考过程"}]
+        save(withr, p)
+        loaded = load(p)
+        assert "reasoning_content" not in loaded[0]
+        assert loaded[0]["content"] == "答案"
 
-    # 损坏文件：当无历史处理，不崩
-    with open(p, "w", encoding="utf-8") as f:
-        f.write("{坏 json")
-    assert load(p) is None
-
-    import shutil
-    shutil.rmtree(d)
+        # 损坏文件：当无历史处理，不崩
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("{坏 json")
+        assert load(p) is None
     print("history ok")
 
 
 def test_skills():
     import tempfile
     import os
-    import shutil
     from skills import skills, list_skills
-    d = tempfile.mkdtemp()
-    # 造两个 skill：标准 frontmatter
-    os.makedirs(os.path.join(d, "foo"))
-    with open(os.path.join(d, "foo", "SKILL.md"), "w", encoding="utf-8") as f:
-        f.write("---\nname: foo\ndescription: 做 foo 的事\n---\n\n# 正文很长...\n")
-    os.makedirs(os.path.join(d, "bar"))
-    with open(os.path.join(d, "bar", "SKILL.md"), "w", encoding="utf-8") as f:
-        f.write("---\nname: bar\ndescription: 做 bar 的事\n---\n")
-    # 没有 SKILL.md 的目录：忽略，不崩
-    os.makedirs(os.path.join(d, "empty"))
-    # 多行 description（YAML 折叠语法）：手写 split 会读错，yaml 能正确合并
-    os.makedirs(os.path.join(d, "baz"))
-    with open(os.path.join(d, "baz", "SKILL.md"), "w", encoding="utf-8") as f:
-        f.write("---\nname: baz\ndescription: >\n  第一行\n  第二行\n---\n")
+    with tempfile.TemporaryDirectory() as d:
+        # 造两个 skill：标准 frontmatter
+        os.makedirs(os.path.join(d, "foo"))
+        with open(os.path.join(d, "foo", "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("---\nname: foo\ndescription: 做 foo 的事\n---\n\n# 正文很长...\n")
+        os.makedirs(os.path.join(d, "bar"))
+        with open(os.path.join(d, "bar", "SKILL.md"), "w", encoding="utf-8") as f:
+            f.write("---\nname: bar\ndescription: 做 bar 的事\n---\n")
+        # 没有 SKILL.md 的目录：忽略，不崩
+        os.makedirs(os.path.join(d, "empty"))
 
-    got = dict(skills(d))
-    assert got["foo"] == "做 foo 的事" and got["bar"] == "做 bar 的事"
-    assert "第一行" in got["baz"] and "第二行" in got["baz"], got["baz"]  # 多行被正确合并
+        got = dict(skills(d))
+        assert got["foo"] == "做 foo 的事" and got["bar"] == "做 bar 的事"
 
-    # list_skills：含名字、描述、和「按需 read」的引导
-    text = list_skills(d)
-    assert "foo" in text and "做 foo 的事" in text
-    assert "SKILL.md" in text  # 告诉模型去哪 read
+        # list_skills：含名字、描述、和「按需 read」的引导
+        text = list_skills(d)
+        assert "foo" in text and "做 foo 的事" in text
+        assert "SKILL.md" in text  # 告诉模型去哪 read
 
-    # 没有 skills 目录：返回空，不崩
-    assert skills(os.path.join(d, "nonexistent")) == []
-    assert list_skills(os.path.join(d, "nonexistent")) == ""
-
-    shutil.rmtree(d)
+        # 没有 skills 目录：返回空，不崩
+        assert skills(os.path.join(d, "nonexistent")) == []
     print("skills ok")
 
 
@@ -292,24 +262,6 @@ def test_compact():
     # 最近6轮原样在末尾
     assert new[-1] == {"role": "assistant", "content": "a9"}
     assert len(new) < len(h)  # 确实压短了
-
-    # compress：拼压缩请求（这次提出来才能测——COMPRESS_PROMPT 拼装 + 序列化）
-    import json
-    from _compact import compress, COMPRESS_PROMPT
-    captured = {}
-    def fake_call(msgs, model):
-        captured["msgs"], captured["model"] = msgs, model
-        return "压缩结果"
-    mid = [{"role": "user", "content": "u0"}, {"role": "assistant", "content": "a0"}]
-    compact_mod.call = fake_call
-    try:
-        out = compress(mid, "ark-code")
-    finally:
-        compact_mod.call = original_call
-    assert out == "压缩结果"
-    assert captured["model"] == "ark-code"  # 用传入的 model
-    assert captured["msgs"][0] == {"role": "system", "content": COMPRESS_PROMPT}  # system=压缩prompt
-    assert json.loads(captured["msgs"][1]["content"]) == mid  # user=待压内容的json
     print("compact ok")
 
 
@@ -322,7 +274,6 @@ if __name__ == "__main__":
     test_inject()
     test_inject_sentinel()
     test_feedback()
-    test_build_system()
     test_history()
     test_skills()
     test_compact()

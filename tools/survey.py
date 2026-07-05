@@ -1,13 +1,12 @@
 """预置函数 survey：测绘 Python 项目架构，缓存进内核内存，按需查询全景/细节/波及面。
 
-测绘一次后自动缓存（不进 LLM 上下文），后续 overview/detail/impact 都查缓存，
-避免将整张图谱塞给模型。作为 read 的前置工具——先 survey 了解概况，再 read 读具体文件。
+缓存自动管理：首次查询自动测绘；项目文件变更（新增/删除/修改）自动失效重扫。
+调用者无需关心测绘时机。作为 read 的前置工具——先 survey 了解概况，再 read 读具体文件。
 
 用法：
-    survey("项目目录")                  # 第一次测绘并缓存
-    survey(mode="overview")             # 全景：每模块一行
-    survey(mode="detail", target="x")   # 单模块细节
-    survey(mode="impact", target="x")   # 改它波及谁
+    survey()                            # 全景：每模块一行
+    survey(mode="detail", target="x")   # 单模块细节：签名、MRO、方法
+    survey(mode="impact", target="x")   # 反向依赖：改 x 会波及谁
 """
 
 import ast
@@ -18,6 +17,7 @@ import sys
 from result import ListResult, Result
 
 _cache = {}
+_cache_fp = None
 
 _EXCLUDE = frozenset({
     "__pycache__", ".git", ".ruff_cache", ".claude", ".venv", "venv",
@@ -36,15 +36,36 @@ def _modname(path, base):
     return rel.replace(os.sep, ".")
 
 
-def _scan(path):
-    path = os.path.abspath(path)
+def _list_py(path):
+    """列出 path 下所有 .py 文件（跳过 _EXCLUDE 目录），返回绝对路径列表。"""
     files = []
     for root, dirs, names in os.walk(path):
         dirs[:] = [d for d in dirs if d not in _EXCLUDE]
         for f in names:
             if f.endswith(".py"):
                 files.append(os.path.join(root, f))
+    return files
 
+
+def _fingerprint(path):
+    """(sorted 文件路径元组, max mtime)。删除改变元组、修改/新增改变 mtime。"""
+    files = sorted(_list_py(os.path.abspath(path)))
+    if not files:
+        return ((), 0.0)
+    return (tuple(files), max(os.path.getmtime(f) for f in files))
+
+
+def _ensure_cache(path):
+    """空缓存或 fingerprint 变化则重扫；否则复用。"""
+    global _cache, _cache_fp
+    fp = _fingerprint(path)
+    if not _cache or _cache_fp != fp:
+        _cache = _scan(path, [f for f in fp[0]])
+        _cache_fp = fp
+
+
+def _scan(path, files):
+    path = os.path.abspath(path)
     tops = {_modname(f, path).split(".")[0] for f in files}
     graph = {}
 
@@ -100,20 +121,15 @@ def _scan(path):
     return graph
 
 
-def survey(path=".", mode="scan", target=None):
-    """测绘/查询 Python 项目架构。第一次自动测绘并缓存，后续查缓存不进 LLM 上下文。
+def survey(mode="overview", target=None, path="."):
+    """测绘/查询 Python 项目架构。缓存自动管理，无需手动测绘。
 
-    survey("项目目录")               — 测绘
-    survey(mode="overview")          — 全景：每模块一行（函数/类数、依赖、摘要）
+    survey()                         — 全景：每模块一行（函数/类数、依赖、摘要）
     survey(mode="detail", target=X)  — 单模块：签名、MRO、方法
     survey(mode="impact", target=X)  — 反向依赖：改 X 会波及谁
     """
-    global _cache
-    if mode == "scan" or not _cache:
-        _cache = _scan(path)
+    _ensure_cache(path)
 
-    if mode == "scan":
-        return Result(f"测绘完成，共 {len(_cache)} 个模块", error=None)
     if mode == "overview":
         lines = []
         for m in sorted(_cache):
