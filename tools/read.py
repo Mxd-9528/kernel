@@ -12,6 +12,8 @@ def read(file_path, offset=None, limit=None):
 
     offset/limit：对文本是行，对 PDF 是页，均从 1 开始计数。
     行号/页码是显示用的，不在文件里。复制给 edit 时只复制原文部分。
+
+    prompt.txt 已注入 system prompt，不必 read 它。
     """
     if file_path.lower().endswith(".pdf"):
         return _read_pdf(file_path, offset, limit)

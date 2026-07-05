@@ -195,6 +195,33 @@ def test_bash():
     print("bash ok")
 
 
+def test_plan():
+    from tools.plan import plan
+
+    # 合法三态：格式化整表 + error=None + count 匹配
+    r = plan([
+        {"text": "读需求", "status": "completed"},
+        {"text": "写代码", "status": "in_progress"},
+        {"text": "跑测试", "status": "pending"},
+    ])
+    assert r.error is None and r.count == 3
+    assert "✔ 读需求" in str(r) and "▸ 写代码" in str(r) and "☐ 跑测试" in str(r)
+
+    # 非法 status：ValueError 承载
+    r = plan([{"text": "x", "status": "bogus"}])
+    assert isinstance(r.error, ValueError)
+
+    # 非 list 输入：TypeError 承载
+    r = plan("not a list")
+    assert isinstance(r.error, TypeError)
+
+    # 空列表：不报错，显示占位文本
+    r = plan([])
+    assert r.error is None and r.count == 0 and "空" in str(r)
+
+    print("plan ok")
+
+
 def test_survey():
     """survey 缓存自动管理：首次自动测绘、fingerprint 变化触发重扫、删除文件后模块消失。"""
     import sys
