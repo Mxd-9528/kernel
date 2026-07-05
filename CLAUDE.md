@@ -27,10 +27,8 @@ uvx ruff check .          # Python 3.8 静态检查
 | `background.py` / `_background.py` | 后台任务接口 (超时转后台、状态查询、取消) / 实现 |
 | `compact.py` / `_compact.py` | 上下文压缩接口 (触发判定、结构化摘要) / 实现 |
 | `run.py` / `_run.py` | 代码执行接口 (持久 IPython 单例、Result 三元组) / 实现 |
-| `extract.py` | 从模型回复中提取 `<!EXEC>` 代码块 |
 | `result.py` | `Result` / `ListResult` / `DictResult`：Body + `.error` + `.facts` |
 | `inject.py` | `shell.push` 将对象推入 IPython `user_ns`，幂等 |
-| `load.py` | 机件注入锚点（约定优于配置的接入点之一） |
 | `manifest.py` | `tools/` 目录自动发现 |
 | `skills.py` | `skills/*/SKILL.md` 自动发现 |
 | `history.py` | 对话历史持久化 |

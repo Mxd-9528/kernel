@@ -11,12 +11,17 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 
 _executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="bg-task")
 _tasks = {}  # task_id -> Future 对象
-_results = {}  # task_id -> 结果文件路径
+_results = {}  # task_id -> 结果文件路径（幂等缓存：重复轮询 done 任务复用同一文件，不泄漏）
 _lock = threading.Lock()
 
 
 def _save_result(task_id, result):
-    """把结果序列化到临时文件，返回路径，避免直接返回大结果爆 token。"""
+    """把结果序列化到临时文件，返回路径，避免直接返回大结果爆 token。
+    幂等：同一 task_id 已保存过则复用路径，不重复 mkstemp（否则重复轮询 done 会泄漏 tempfile）。"""
+    with _lock:
+        cached = _results.get(task_id)
+    if cached is not None:
+        return cached
     fd, path = tempfile.mkstemp(suffix=".txt", prefix=f"task-{task_id}-")
     try:
         os.write(fd, str(result).encode("utf-8"))

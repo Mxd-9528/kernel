@@ -1,9 +1,9 @@
+import re
 import threading
 from pathlib import Path
 
 from call import call
 from compact import compact
-from extract import extract
 from history import save
 from manifest import list_tools
 from rich.console import Console
@@ -21,6 +21,15 @@ _MAX_ITERS = 20
 #   stop.clear()  新任务开始前清零
 #   stop.is_set() 循环边界检查
 stop = threading.Event()
+
+# 外层 <!EXEC>...</EXEC> 是真边界（代码里不会出现）；内层 ``` 顺着模型天性。
+# re.DOTALL 让 . 匹配换行，否则多行代码会被吞掉只剩第一行。
+_EXEC_PATTERN = r"<!EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
+
+
+def _extract(text):
+    """从模型回话里抠出所有 <!EXEC> 代码块，返回代码字符串列表。"""
+    return [m.strip() for m in re.findall(_EXEC_PATTERN, text, re.DOTALL)]
 
 
 def build_system():
@@ -76,7 +85,7 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         messages.append({"role": "assistant", "content": reply})
         save(messages)  # 步级存盘：模型回复即落盘
 
-        blocks = extract(reply)
+        blocks = _extract(reply)
         if not blocks:
             return reply, messages  # 纯文本 = 模型收尾
 

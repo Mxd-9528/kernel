@@ -227,13 +227,10 @@ def test_survey():
 
 
 def run_all():
-    test_read()
-    test_glob()
-    test_grep()
-    test_write()
-    test_edit()
-    test_bash()
-    test_survey()
+    # 自动扫本模块 test_* 函数按定义顺序执行；加测试只加 def test_xxx。
+    for name, fn in list(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
 
 
 if __name__ == "__main__":

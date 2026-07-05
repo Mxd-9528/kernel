@@ -47,9 +47,9 @@ def test_run():
 
 
 def test_extract():
-    from extract import extract
+    from agent import _extract
     reply = '<!EXEC>\n```python\ns = "他说```你好```"\nprint(s)\nfor i in range(2):\n    print(i)\n```\n</EXEC>'
-    blocks = extract(reply)
+    blocks = _extract(reply)
     assert len(blocks) == 1
     code = blocks[0]
     assert code.startswith('s = "他说')
@@ -58,7 +58,7 @@ def test_extract():
     assert code.count("\n") == 3
 
     multi = '<!EXEC>\n```python\n1 + 1\n```\n</EXEC>\n中间文字\n<!EXEC>\n```python\nprint("hello")\n```\n</EXEC>'
-    blocks = extract(multi)
+    blocks = _extract(multi)
     assert len(blocks) == 2
     assert blocks[0] == "1 + 1"
     assert blocks[1] == 'print("hello")'
@@ -246,17 +246,10 @@ def test_compact():
 
 
 if __name__ == "__main__":
-    test_result()
-    test_run()
-    test_extract()
-    test_agent()
-    test_manifest()
-    test_inject()
-    test_inject_sentinel()
-    test_feedback()
-    test_history()
-    test_skills()
-    test_compact()
+    # 自动扫本模块 test_* 函数按定义顺序执行；加测试只加 def test_xxx，不用改此段。
+    for name, fn in list(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
     # 接口 = 实现的 re-export：签名一致 = 同一对象。
     import call, _call, background, _background, compact, _compact, run, _run
     assert call.call is _call.call, "call 接口漂移"
