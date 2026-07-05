@@ -180,18 +180,27 @@ def test_edit():
 
 def test_bash():
     from tools.bash import bash
+    import subprocess as _sp
 
     # 基本执行：stdout 进 Body，returncode=0，工具自身 error=None
     r = bash("echo hello")
     assert r.error is None and "hello" in str(r) and r.returncode == 0
+    # stdout_file 永远进 facts，超时后仍可 read 拿完整输出
+    assert r.stdout_file and os.path.exists(r.stdout_file)
 
     # 业务失败：命令退出码非0 → returncode 进 facts，但工具 error 仍是 None
     r = bash("exit 3")
     assert r.error is None and r.returncode == 3
 
-    # 超时：error 承载 TimeoutExpired，不挂起
+    # 硬超时：error 承载 TimeoutExpired，进程被杀
     r = bash("sleep 5", timeout=1)
-    assert isinstance(r.error, __import__("subprocess").TimeoutExpired)
+    assert isinstance(r.error, _sp.TimeoutExpired)
+    assert r.returncode is None
+
+    # stderr 合并到 stdout（按时序）：pip/npm 的进度信息常在 stderr
+    r = bash("echo out; echo err 1>&2")
+    assert "out" in str(r) and "err" in str(r)
+
     print("bash ok")
 
 
