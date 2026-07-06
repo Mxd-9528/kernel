@@ -16,23 +16,15 @@ from skills import list_skills
 _MAX_ITERS = 20
 _MAX_RUN_SECS = 60  # 单代码块硬超时秒数，超过则放弃等待、抛 TimeoutError（防止代码块永久阻塞卡住循环）
 
-# 中断协议（协作式，不打断 IPython 单元）：
-#   stop.set()    外部要求停下（Ctrl+C / 命令切换）
-#   stop.clear()  新任务开始前清零
-#   stop.is_set() 循环边界检查
+# 中断协议（协作式，不打断 IPython 单元）
 stop = threading.Event()
 
 # 外层 <!EXEC>...</EXEC> 是真边界（代码里不会出现）；内层 ``` 顺着模型天性。
-# re.DOTALL 让 . 匹配换行，否则多行代码会被吞掉只剩第一行。
 _EXEC_PATTERN = r"<!EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
 
-# ANSI 转义序列清洗（IPython 输出可能带颜色码）
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
-def _extract(text):
-    """从模型回话里抠出所有 <!EXEC> 代码块，返回代码字符串列表。"""
-    return [m.strip() for m in re.findall(_EXEC_PATTERN, text, re.DOTALL)]
 
 
 def _run_cell(code):
@@ -85,11 +77,6 @@ def build_system():
     return out
 
 
-def render(reply):
-    """把模型回复渲染给人看（Markdown）。环境反馈不在这里打印。"""
-    Console().print(Markdown(reply))
-
-
 # feedback 层的字符截断：防止大 read / bash 输出爆上下文
 # 40/20/40 三段策略：头 40% + 中 20% + 尾 40%——中间 20% 刻意保留，
 # 因为长日志的中间往往有关键信号（如 pip 的进度转折、traceback 的具体错误行、
@@ -127,7 +114,6 @@ def feedback(results):
             parts.append(f"\n--- 代码块 {i + 1} ---")
         if isinstance(r, BaseException):
             import traceback
-            # 若异常带内核 stdout/stderr（_run_cell 附上的），先展示
             for attr in ("_kernel_stdout", "_kernel_stderr"):
                 text = getattr(r, attr, "")
                 if text and text.strip():
@@ -186,11 +172,11 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
             break  # chat 按了 Ctrl+C，回到输入
         messages = compact(messages, model=model)
         reply = call(messages, model)
-        render(reply)
+        Console().print(Markdown(reply))
         messages.append({"role": "assistant", "content": reply})
         save(messages)  # 步级存盘：模型回复即落盘
 
-        blocks = _extract(reply)
+        blocks = [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
         if not blocks:
             return reply, messages  # 纯文本 = 模型收尾
 
@@ -198,5 +184,4 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         messages.append({"role": "user", "content": feedback(results)})
         save(messages)  # 步级存盘：环境反馈即落盘
 
-    # 到达最大轮数或被 stop 打断
     return reply, messages

@@ -43,7 +43,6 @@ def bash(command, timeout=30, cwd=None):
     except subprocess.TimeoutExpired:
         p.kill()
         p.wait()
-        # 读已收集的输出附到异常上，模型能看到超时前的进度
         with open(log_path, encoding="utf-8", errors="replace") as f:
             partial = f.read()
         raise subprocess.TimeoutExpired(command, timeout, output=partial)
