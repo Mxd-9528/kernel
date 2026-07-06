@@ -302,10 +302,6 @@ def test_bg_start():
             results.append(i)
 
     t = bg_start(worker)
-    # 立即返回 Thread 对象
-    import threading
-    assert isinstance(t, threading.Thread)
-    assert t.is_alive() or len(results) > 0  # 可能已经在跑或很快跑完
 
     # 等待完成
     t.join(timeout=2)

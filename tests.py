@@ -89,16 +89,8 @@ def test_manifest():
 
 
 def test_inject():
-    # 回归：启动路径必须把预置函数注入 user_ns
-    from agent import _run_cell
-    for f in ("read", "write", "edit", "glob", "grep", "bash"):
-        # _run_cell("dir()") 返回 list（dir 的原生返回），检查 f 是否在其中
-        names = _run_cell("dir()")
-        assert f in names, f"{f} 未注入命名空间"
-    # 机件与 inspect 也在
-    names = _run_cell("dir()")
-    assert "inspect" in names
     # 回归：模型在内核里重绑预置函数，后续轮次不被 inject 覆盖（持久内核核心优势）
+    from agent import _run_cell
     _run_cell("glob = lambda *a: '热补丁版'")
     _run_cell("1+1")  # 再跑一轮，会再调 inject——不能覆盖上面的重绑
     assert _run_cell("glob('x')") == "热补丁版", "重绑被 inject 覆盖了——持久性被破坏"

@@ -19,16 +19,11 @@ def plan(items):
         ])
 
     何时用：任务跨多轮、有逻辑阶段，或用户一句话要求做多件事。
-    何时不用：单步任务直接做；不用填充步骤拉长；不列你做不到的事。
 
     维护：
     - 始终恰好一个 in_progress（不批量跳状态）
     - 结束前所有项应为 completed 或明确取消
     - 调用后不复述计划全文——返回值已含格式化整表
-
-    示例：
-        好：1. Add CLI entry with file args  2. Parse Markdown via CommonMark  ...
-        差：1. Create CLI tool  2. Add parser  3. Convert to HTML  （太笼统、无验证锚点）
 
     每步 5-7 字，简短描述任务。status 三种：pending / in_progress / completed。
     """
