@@ -4,17 +4,15 @@
 调用者无需关心测绘时机。作为 read 的前置工具——先 survey 了解概况，再 read 读具体文件。
 
 用法：
-    survey()                            # 全景：每模块一行
-    survey(mode="detail", target="x")   # 单模块细节：签名、MRO、方法
-    survey(mode="impact", target="x")   # 反向依赖：改 x 会波及谁
+    survey()                            # 全景 str：每模块一行
+    survey(mode="detail", target="x")   # 单模块 str：签名、MRO、方法
+    survey(mode="impact", target="x")   # 反向依赖 list[str]：改 x 会波及谁
 """
 
 import ast
 import inspect
 import os
 import sys
-
-from result import ListResult, Result
 
 _cache = {}
 _cache_fp = None
@@ -124,9 +122,11 @@ def _scan(path, files):
 def survey(mode="overview", target=None, path="."):
     """测绘/查询 Python 项目架构。缓存自动管理，无需手动测绘。
 
-    survey()                         — 全景：每模块一行（函数/类数、依赖、摘要）
-    survey(mode="detail", target=X)  — 单模块：签名、MRO、方法
-    survey(mode="impact", target=X)  — 反向依赖：改 X 会波及谁
+    survey()                         — 全景 str：每模块一行（函数/类数、依赖、摘要）
+    survey(mode="detail", target=X)  — 单模块 str：签名、MRO、方法
+    survey(mode="impact", target=X)  — 反向依赖 list[str]：改 X 会波及谁
+
+    失败通过 raise 传递（ValueError）。
     """
     _ensure_cache(path)
 
@@ -140,15 +140,15 @@ def survey(mode="overview", target=None, path="."):
             dep = f" →{','.join(i['deps'])}" if i["deps"] else ""
             lines.append(f"{m} ({len(i['functions'])}f/{len(i['classes'])}c)"
                          f"{dep}  {i.get('summary','')}")
-        return Result("\n".join(lines), error=None)
+        return "\n".join(lines)
     if mode == "detail":
         if not target:
-            return Result("", error="需要 target= 指定模块名")
+            raise ValueError("需要 target= 指定模块名")
         i = _cache.get(target)
         if not i:
-            return Result("", error=f"未找到 {target}")
+            raise ValueError(f"未找到 {target}")
         if "error" in i:
-            return Result(f"{target}: {i['error']}", error=None)
+            return f"{target}: {i['error']}"
         out = [f"模块 {target} ({i['file']})"]
         if i.get("summary"):
             out.append(f"  摘要: {i['summary']}")
@@ -162,12 +162,11 @@ def survey(mode="overview", target=None, path="."):
         for f in i["functions"]:
             sig = f.get("signature") or f"({', '.join(f['args'])})"
             out.append(f"  函数 {f['name']}{sig}  {f.get('summary','')}")
-        return Result("\n".join(out), error=None)
+        return "\n".join(out)
     if mode == "impact":
         if not target:
-            return Result("", error="需要 target= 指定模块名")
+            raise ValueError("需要 target= 指定模块名")
         top = target.split(".")[0]
-        r = sorted(m for m, i in _cache.items()
-                   if "error" not in i and top in i.get("deps", []))
-        return ListResult(r, error=None)
-    return Result("", error=f"未知 mode: {mode}")
+        return sorted(m for m, i in _cache.items()
+                      if "error" not in i and top in i.get("deps", []))
+    raise ValueError(f"未知 mode: {mode}")

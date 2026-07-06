@@ -1,18 +1,14 @@
-"""预置函数 bash：执行 shell 命令，返回 stdout + returncode 三元组。
+"""预置函数 bash：执行 shell 命令，返回 subprocess.CompletedProcess。
 
-契约：命令退出码非0是「被调程序的业务结果」→ 进 .facts，bash 工具自身 error=None；
-只有 bash 启动不了或超时才算工具失败 → error 承载。
-
-stdout 实时刷入临时文件（避免 subprocess.PIPE 缓冲区吞输出的问题），
-stdout_file 进 facts；模型可后续 read(stdout_file) 拿完整累积。stderr 合并到 stdout（按时序）。
+标准库类型：CompletedProcess 有 .stdout / .stderr / .returncode / .args 属性。
+stderr 合并到 stdout（按时序）。命令退出码非零不是失败——只是业务结果，通过 .returncode 判断。
+超时通过 raise subprocess.TimeoutExpired 传递（含 .stdout 属性可看已收集输出）。
 """
 
 import os
 import shutil
 import subprocess
 import tempfile
-
-from result import Result
 
 _GIT_BASH = [
     r"C:\Program Files\Git\bin\bash.exe",
@@ -24,19 +20,14 @@ def _bash_exe():
     return shutil.which("bash") or next((p for p in _GIT_BASH if shutil.which(p)), "bash")
 
 
-def _read(path):
-    with open(path, encoding="utf-8", errors="replace") as f:
-        return f.read().rstrip("\r\n")
-
-
 def bash(command, timeout=30, cwd=None):
-    """执行 shell 命令（Git Bash/POSIX），stdout 落临时文件并返回内容。
+    """执行 shell 命令（Git Bash/POSIX），返回 subprocess.CompletedProcess。
 
-    timeout: 硬超时秒数。到时未完成即杀进程 + error=TimeoutExpired。默认 30。
-    stdout_file: 所有调用都落进 facts，模型可 read(stdout_file) 拿完整输出（超时后也可用）。
+    timeout: 硬超时秒数。到时未完成即杀进程 + raise TimeoutExpired。默认 30。
 
-    .error 只在 bash 自身没跑成时非 None（找不到 bash、超时）；命令退出码非零是命令的业务失败、
-    不是 bash 工具的失败，所以 .error 仍是 None——想知道命令成败查 .returncode（facts），不是 .error。
+    stdout 实时刷入临时文件（避免 subprocess.PIPE 缓冲区吞输出）；命令完成后
+    整体读回作为 CompletedProcess.stdout。stderr 合并到 stdout 保持时序。
+    命令的退出码非零是"命令的业务失败"，不是 bash 工具故障——通过 .returncode 判断。
     """
     fd, log_path = tempfile.mkstemp(suffix=".log", prefix="bash-")
     try:
@@ -45,24 +36,23 @@ def bash(command, timeout=30, cwd=None):
             stdout=fd, stderr=subprocess.STDOUT, cwd=cwd,
         )
     finally:
-        os.close(fd)  # 我们不读文件描述符，subprocess 独占它写
+        os.close(fd)
 
     try:
         p.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         p.kill()
         p.wait()
-        return Result(
-            _read(log_path),
-            error=subprocess.TimeoutExpired(command, timeout),
-            returncode=None,
-            timeout=timeout,
-            stdout_file=log_path,
-        )
+        # 读已收集的输出附到异常上，模型能看到超时前的进度
+        with open(log_path, encoding="utf-8", errors="replace") as f:
+            partial = f.read()
+        raise subprocess.TimeoutExpired(command, timeout, output=partial)
 
-    return Result(
-        _read(log_path),
-        error=None,
+    with open(log_path, encoding="utf-8", errors="replace") as f:
+        output = f.read().rstrip("\r\n")
+    return subprocess.CompletedProcess(
+        args=command,
         returncode=p.returncode,
-        stdout_file=log_path,
+        stdout=output,
+        stderr="",  # 已合并到 stdout
     )

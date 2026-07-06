@@ -1,49 +1,31 @@
-"""核心 harness 测试：result/run/extract/agent/manifest/inject。运行本文件跑全部（含工具）。"""
+"""核心 harness 测试：extract/agent/manifest/inject/feedback。运行本文件跑全部（含工具）。"""
 
 
-def test_result():
-    from result import Result, ListResult, DictResult
-    r = Result("hi", error=None, stdout="hi")
-    assert str(r) == "hi" and r.error is None and r.stdout == "hi" and r.facts == {"stdout": "hi"}
+def test_run_cell():
+    """_run_cell 返回原生 Python 值；异常直接 raise（含 traceback）。"""
+    from agent import _run_cell
 
-    lr = ListResult([1, 2], error=None, rowcount=2)
-    assert list(lr) == [1, 2] and lr.rowcount == 2 and lr.error is None
-
-    dr = DictResult({"a": 1}, error=None)
-    assert dr["a"] == 1 and dr.error is None
-
-    err = ValueError("boom")
-    e = Result("", error=err)
-    assert e.error is err
-
+    # 表达式值
+    assert _run_cell("1 + 1") == 2
+    # 无值（stdout 兜底）
+    assert _run_cell("print('hi')") == "hi"
+    # 语句无输出
+    assert _run_cell("x = 5") is None
+    # 上一步的 x 在内核里
+    assert _run_cell("x") == 5
+    # 异常 raise
     try:
-        Result("x")
-    except TypeError:
+        _run_cell("1/0")
+    except ZeroDivisionError:
         pass
     else:
-        raise AssertionError("漏传 error= 应该报 TypeError")
-
-    # __repr__ 是三元组到达模型的坍缩点：Body + error + facts 一次性倒出。
-    assert "正文" in repr(Result("正文", error=None, lines=2))
-    assert "FileNotFoundError" in repr(Result("", error=FileNotFoundError("no")))
-    print("result ok")
-
-
-def test_run():
-    from run import run
-    r = run("1 + 1")
-    assert r == "2" and r.error is None and r.facts == {}  # 成功无附加事实，facts 干净不重复
-    r = run("print('hi')")
-    assert r == "hi" and r.error is None
-    r = run("x = 5")
-    assert r == "" and r.error is None
-    assert run("x") == "5"
-    r = run("1/0")
-    assert r == "" and isinstance(r.error, ZeroDivisionError)
-    r = run("print('a'); 1/0")
-    assert r.stdout.startswith("a") and isinstance(r.error, ZeroDivisionError)
-    assert "\x1b[" not in r.stdout
-    print("run ok")
+        raise AssertionError("应 raise ZeroDivisionError")
+    # 异常前的 stdout 会附到异常上
+    try:
+        _run_cell("print('a'); 1/0")
+    except ZeroDivisionError as e:
+        assert getattr(e, "_kernel_stdout", "").startswith("a")
+    print("run_cell ok")
 
 
 def test_extract():
@@ -98,17 +80,20 @@ def test_manifest():
 
 
 def test_inject():
-    # 回归：启动路径（run）必须自动把预置函数注入 user_ns
-    from run import run
+    # 回归：启动路径必须把预置函数注入 user_ns
+    from agent import _run_cell
     for f in ("read", "write", "edit", "glob", "grep", "bash"):
-        assert f in run("dir()"), f"{f} 未注入命名空间"
+        # _run_cell("dir()") 返回 list（dir 的原生返回），检查 f 是否在其中
+        names = _run_cell("dir()")
+        assert f in names, f"{f} 未注入命名空间"
     # 机件与 inspect 也在
-    assert "inspect" in run("dir()") and "Result" in run("dir()")
+    names = _run_cell("dir()")
+    assert "inspect" in names
     # 回归：模型在内核里重绑预置函数，后续轮次不被 inject 覆盖（持久内核核心优势）
-    run("glob = lambda *a: '热补丁版'")
-    run("1+1")  # 再跑一轮，会再调 inject——不能覆盖上面的重绑
-    assert run("glob('x')") == "'热补丁版'", "重绑被 inject 覆盖了——持久性被破坏"
-    run("from tools.glob import glob")  # 还原成真 glob，避免污染后续测试
+    _run_cell("glob = lambda *a: '热补丁版'")
+    _run_cell("1+1")  # 再跑一轮，会再调 inject——不能覆盖上面的重绑
+    assert _run_cell("glob('x')") == "热补丁版", "重绑被 inject 覆盖了——持久性被破坏"
+    _run_cell("from tools.glob import glob")  # 还原成真 glob，避免污染后续测试
     print("inject ok")
 
 
@@ -142,21 +127,32 @@ def test_inject_sentinel():
 
 def test_feedback():
     from agent import feedback
-    from result import Result
-    # 单块：[环境反馈] 开头，无代码块编号，repr 原样转达三元组
-    one = feedback([Result("正文", error=None, lines=2)])
+    # 单块：[环境反馈] 开头，无代码块编号
+    one = feedback(["hello"])
     assert one.startswith("[环境反馈]")
-    assert "正文" in one and "lines=2" in one
+    assert "hello" in one
     assert "代码块" not in one  # 单块不加编号
 
     # 多块：每块加 --- 代码块 N --- 分隔
-    multi = feedback([Result("a", error=None), Result("b", error=None)])
+    multi = feedback(["a", "b"])
     assert "--- 代码块 1 ---" in multi and "--- 代码块 2 ---" in multi
     assert "a" in multi and "b" in multi
 
-    # 空 body 且无 facts → (无输出)
-    empty = feedback([Result("", error=None)])
+    # None → (无输出)
+    empty = feedback([None])
     assert "(无输出)" in empty
+
+    # 异常 → traceback
+    try:
+        1 / 0
+    except ZeroDivisionError as e:
+        exc = e
+    err_out = feedback([exc])
+    assert "ZeroDivisionError" in err_out
+
+    # 原生类型 → repr
+    lst_out = feedback([[1, 2, 3]])
+    assert "[1, 2, 3]" in lst_out
     print("feedback ok")
 
 
@@ -251,25 +247,23 @@ if __name__ == "__main__":
         if name.startswith("test_") and callable(fn):
             fn()
     # 接口 = 实现的 re-export：签名一致 = 同一对象。
-    import call, _call, background, _background, compact, _compact, run, _run
+    import call, _call, background, _background, compact, _compact
     assert call.call is _call.call, "call 接口漂移"
     assert call.default_model is _call.default_model, "call.default_model 接口漂移"
     for fn in ("run_with_timeout", "task_status", "task_cancel"):
         assert getattr(background, fn) is getattr(_background, fn), f"background.{fn} 接口漂移"
     assert compact.compact is _compact.compact, "compact 接口漂移"
-    assert run.run is _run.run, "run 接口漂移"
     # 视野即依赖：上游源码不应出现 _* 实现模块名（认知链不穿透接口）。
     from pathlib import Path
     exempt = {"_call.py", "call.py", "_background.py", "background.py",
-              "_compact.py", "compact.py", "_run.py", "run.py",
+              "_compact.py", "compact.py",
               "tests.py"}  # 实现自身、接口（转手）、测试跨水线特权
     for src in Path(".").glob("*.py"):
         if src.name in exempt:
             continue
         text = src.read_text("utf-8")
-        for name in ("_call", "_background", "_compact", "_run"):
+        for name in ("_call", "_background", "_compact"):
             assert "from {} import".format(name) not in text, f"{src.name} 认知链穿透 {name}"
-            # 裸 import：拦 "import _xxx" 后接空白/逗号/行尾（"import _call_stub" 不误伤——不同名）
             import re
             assert not re.search(r"(?m)^\s*import\s+{}(?:\s|,|$)".format(re.escape(name)), text), f"{src.name} 认知链穿透 {name}"
     print("contract ok")

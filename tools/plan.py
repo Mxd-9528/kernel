@@ -1,16 +1,15 @@
 """预置函数 plan：跨轮任务计划（整表覆盖式 TODO）。
 
 设计洞察沿用 Codex update_plan：一个函数、一份整表、三态、无 id、prompt 层管纪律。
+返回格式化的整表字符串；失败通过 raise 传递（ValueError / TypeError）。
 """
-
-from result import Result
 
 _VALID = {"pending", "in_progress", "completed"}
 _MARK = {"pending": "☐", "in_progress": "▸", "completed": "✔"}
 
 
 def plan(items):
-    """维护跨轮 TODO 列表。整表覆盖，每次给完整列表。跟踪多步任务进度。
+    """维护跨轮 TODO 列表。整表覆盖，每次给完整列表。返回格式化的整表字符串。
 
     调用格式：
         plan([
@@ -34,13 +33,12 @@ def plan(items):
     每步 5-7 字，简短描述任务。status 三种：pending / in_progress / completed。
     """
     if not isinstance(items, list):
-        return Result("", error=TypeError(f"items 必须是 list，得到 {type(items).__name__}"))
+        raise TypeError(f"items 必须是 list，得到 {type(items).__name__}")
     lines = []
     for item in items:
         text = item.get("text", "").strip()
         status = item.get("status", "pending")
         if status not in _VALID:
-            return Result("", error=ValueError(f"未知状态 {status!r}，须为 pending / in_progress / completed"))
+            raise ValueError(f"未知状态 {status!r}，须为 pending / in_progress / completed")
         lines.append(f"{_MARK[status]} {text}")
-    body = "\n".join(lines) if lines else "(计划为空)"
-    return Result(body, error=None, count=len(items))
+    return "\n".join(lines) if lines else "(计划为空)"
