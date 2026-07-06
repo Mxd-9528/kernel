@@ -1,7 +1,7 @@
 """后台任务管理：ThreadPoolExecutor + Future 生命周期。
 
-只管线程/Future，不构造 Result，不落盘，不管反馈载体格式——
-反馈由上层（tools/task_status.py, tools/task_cancel.py）按需构造。
+只管线程/Future，不构造反馈载体，不落盘——反馈由上层
+（tools/task_status.py, tools/task_cancel.py）按需构造 dict / str。
 """
 
 import threading
@@ -34,11 +34,11 @@ def run_with_timeout(fn, timeout=60, *args, **kwargs):
 
 
 def task_status(task_id, wait=None):
-    """查询任务状态。返回 (state, payload) 原始状态元组，由上层构造 Result。
+    """查询任务状态。返回 (state, payload) 原始状态元组，由上层包装。
 
     state ∈ {"running","done","failed","cancelled","unknown"}
     payload 语义：
-      done → 任务原始返回值（可能是 Result，也可能是任意 Python 对象）
+      done → 任务原始返回值（任意 Python 类型）
       failed → 原始异常对象
       running/cancelled/unknown → None
     wait: None=不续等；正数=最多续等 N 秒

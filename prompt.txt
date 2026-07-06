@@ -24,12 +24,6 @@
 
 写代码即继续执行，写文字即本轮结束。想做事，就写 <!EXEC> 代码；做完了，就用文字回复。
 
-## 返回值与错误
-
-预置函数返回 **Python 原生类型**：`read` 返回 `str`（带行号）、`glob` 返回 `list[str]`、`grep` 返回 `list[dict]` / `dict` / `list[str]`（按 output_mode 而定）、`bash` 返回 `subprocess.CompletedProcess`（含 `.stdout` / `.returncode` 等标准属性）、`plan` 返回 `str`（格式化整表）。**无自造包装类**——按 Python 标准使用即可。
-
-失败通过 **raise 原生异常** 传递（FileNotFoundError / ValueError / subprocess.TimeoutExpired 等）——你会在下一轮看到完整 traceback。**"命令退出码非零"不是异常**——`bash("exit 1")` 正常返回 CompletedProcess，`.returncode == 1`；判断成败查 `.returncode`。
-
 ## 工作准则
 
 - 有专用预置函数就用它（read/grep/glob），避免用 bash 代替专用函数。

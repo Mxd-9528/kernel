@@ -11,8 +11,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from skills import list_skills
 
-# B 闭环：模型自己在持久内核里干活——回代码 → 执行 → 喂结果 → 再回代码 → 直到它说"做完了"。
-# 代码块就是没预先写好的预置函数，返回 Python 原生类型；异常通过 raise 传递。
+# 自驱动循环：模型输出代码块，_run_cell 在持久内核中执行，返回原生 Python 值或异常，
+# feedback 拼成文本喂回模型，直到模型输出纯文本（无 <!EXEC>）为止。
 
 _MAX_ITERS = 20
 _MAX_RUN_SECS = 60  # 单代码块硬超时秒数，超过则转后台由 task_status 查询
@@ -56,13 +56,14 @@ def _run_cell(code):
     stderr = _ANSI.sub("", cap.stderr)
 
     if not r.success:
+        # IPython 语义：语法错误在 error_before_exec，运行时错误在 error_in_exec，两者互斥
+        exc = r.error_before_exec or r.error_in_exec
         # 把 stdout / stderr 附到异常上，feedback 能一并展示
-        exc = r.error_in_exec
         exc._kernel_stdout = stdout  # type: ignore[attr-defined]
         exc._kernel_stderr = stderr  # type: ignore[attr-defined]
         raise exc
 
-    # stderr 非空时通过 print 输出到 stdout 前面（合并流保持时序）
+    # stderr 非空时前置到 stdout（字符串拼接近似合并流；IPython 分开采集，真实时序不可独立恢复）
     if stderr.strip():
         stdout = stderr + stdout
 
@@ -90,11 +91,35 @@ def render(reply):
     Console().print(Markdown(reply))
 
 
+# feedback 层的字符截断：防止大 read / bash 输出爆上下文
+# 40/20/40 三段策略：头 40% + 中 20% + 尾 40%——中间 20% 刻意保留，
+# 因为长日志的中间往往有关键信号（如 pip 的进度转折、traceback 的具体错误行、
+# diff 的真实冲突位置）。头尾截断会丢这些。
+_MAX_FEEDBACK_CHARS = 20000
+
+
+def _truncate(text):
+    """超过 _MAX_FEEDBACK_CHARS 时按 40/20/40 三段保留。"""
+    if len(text) <= _MAX_FEEDBACK_CHARS:
+        return text
+    head_n = int(_MAX_FEEDBACK_CHARS * 0.4)
+    middle_n = int(_MAX_FEEDBACK_CHARS * 0.2)
+    tail_n = _MAX_FEEDBACK_CHARS - head_n - middle_n
+    middle_start = (len(text) - middle_n) // 2
+    return (
+        f"{text[:head_n]}\n"
+        f"\n[... 截断 {len(text) - _MAX_FEEDBACK_CHARS:,} 字符，保留头/中/尾各 40%/20%/40% ...]\n\n"
+        f"{text[middle_start:middle_start + middle_n]}\n"
+        f"\n[... 截断继续 ...]\n\n"
+        f"{text[-tail_n:]}"
+    )
+
+
 def feedback(results):
     """把代码块的执行结果拼成喂给模型的环境反馈文本。
 
     每项可能是任意 Python 对象或 BaseException。用 Python 内置 repr / traceback
-    表达，不引入自造格式。
+    表达，不引入自造格式。超过 _MAX_FEEDBACK_CHARS 字符的输出自动 40/20/40 三段截断。
     """
     parts = ["[环境反馈]"]
     multi = len(results) > 1
@@ -107,15 +132,15 @@ def feedback(results):
             for attr in ("_kernel_stdout", "_kernel_stderr"):
                 text = getattr(r, attr, "")
                 if text and text.strip():
-                    parts.append(text.rstrip())
+                    parts.append(_truncate(text.rstrip()))
             tb = "".join(traceback.format_exception(type(r), r, r.__traceback__))
-            parts.append(tb.rstrip())
+            parts.append(_truncate(tb.rstrip()))
         elif r is None:
             parts.append("(无输出)")
         elif isinstance(r, str):
-            parts.append(r if r else "(空字符串)")
+            parts.append(_truncate(r) if r else "(空字符串)")
         else:
-            parts.append(repr(r))
+            parts.append(_truncate(repr(r)))
     return "\n".join(parts)
 
 
@@ -130,8 +155,8 @@ def _execute_block(code):
     if task_id is not None:
         # 超时分支：任务已转后台，替换为含引导信息的 TimeoutError
         return TimeoutError(
-            f"运行超过 {_MAX_RUN_SECS} 秒，已转为后台任务。task_id={task_id}\n"
-            f"用 task_status(\"{task_id}\") 查状态，task_cancel(\"{task_id}\") 取消。"
+            f"运行超过 {_MAX_RUN_SECS} 秒，已转后台。task_id={task_id}，"
+            f"用 task_status / task_cancel 操作。"
         )
     if error is not None:
         # 代码块内 raise 出来的异常，原样返回让 feedback 用 traceback 展示

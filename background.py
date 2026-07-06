@@ -7,10 +7,10 @@ run_with_timeout(fn, timeout=60, *args, **kwargs) -> (result, error, task_id)
         执行出错:   (None, exception, None)
 
 task_status(task_id, wait=None) -> (state, payload)
-    查询任务状态。返回原始状态元组，由上层（如 tools/task_status.py）构造 Result。
+    查询任务状态。返回原始状态元组，由上层（如 tools/task_status.py）包装成 dict。
     state ∈ {"running","done","failed","cancelled","unknown"}
     payload 语义：
-      done → 任务原始返回值
+      done → 任务原始返回值（任意 Python 类型）
       failed → 原始异常对象
       running / cancelled / unknown → None
     wait 非 None 时最多续等 wait 秒。

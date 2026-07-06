@@ -25,6 +25,13 @@ def test_run_cell():
         _run_cell("print('a'); 1/0")
     except ZeroDivisionError as e:
         assert getattr(e, "_kernel_stdout", "").startswith("a")
+    # 语法错误：IPython 放在 error_before_exec，不是 error_in_exec——回归防护
+    try:
+        _run_cell("def bad(:")
+    except SyntaxError:
+        pass
+    else:
+        raise AssertionError("语法错误应 raise SyntaxError")
     print("run_cell ok")
 
 
@@ -153,6 +160,13 @@ def test_feedback():
     # 原生类型 → repr
     lst_out = feedback([[1, 2, 3]])
     assert "[1, 2, 3]" in lst_out
+
+    # 大输出自动截断（40/20/40 头/中/尾）：防止 read 大日志/bash cat 大文件爆上下文
+    # 头 8000 + 中 4000 + 尾 8000 = 20000 有效字符 + 标签开销 (<1000)
+    huge = "x" * 30000
+    trunc_out = feedback([huge])
+    assert 15000 < len(trunc_out) < 22000, f"截断异常：{len(trunc_out)} 字符"
+    assert "截断" in trunc_out and "40%/20%/40%" in trunc_out
     print("feedback ok")
 
 
