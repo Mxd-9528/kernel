@@ -24,7 +24,6 @@ uvx ruff check .          # Python 3.8 静态检查
 | `chat.py` | 交互入口：输入循环、斜杠命令、调用 agent、持久化历史 |
 | `agent.py` | 自驱动循环 + IPython 内核驱动（`_run_cell`）：LLM 回复 → 提取代码块 → 执行 → 反馈 → 重复 |
 | `call.py` / `_call.py` | LLM 调用接口 / 实现 |
-| `background.py` / `_background.py` | 后台任务接口 (Future 池) / 实现 |
 | `compact.py` / `_compact.py` | 上下文压缩接口 (触发判定、结构化摘要) / 实现 |
 | `inject.py` | `shell.push` 将对象推入 IPython `user_ns`，幂等 |
 | `manifest.py` | `tools/` 目录自动发现 |
@@ -38,7 +37,7 @@ uvx ruff check .          # Python 3.8 静态检查
 
 **上游依赖规则**：
 
-- 所有 `.py` 文件（包括模型生成的 `<!EXEC>` 代码块）import 底层能力时只写 `from call import ...` / `from background import ...` / `from compact import ...`。
+- 所有 `.py` 文件（包括模型生成的 `<!EXEC>` 代码块）import 底层能力时只写 `from call import ...` / `from compact import ...`。
 - 禁止 `from _call import ...` 及同类形式；下划线前缀的模块名不应出现在上游源码中。
 - 接口与实现出现冲突时，修改实现使其符合接口，除非架构师明确决定修订接口。
 - 新增接口 (封装为深模块) 的准入门槛：功能已收敛、接口 10–25 行覆盖对外全部行为、上游无需访问实现内部。
@@ -55,7 +54,7 @@ uvx ruff check .          # Python 3.8 静态检查
 
 ## 预置函数
 
-`tools/` 目录，一函数一文件，`manifest.py` 自动发现：`read` / `glob` / `grep` / `write` / `edit` / `bash` / `plan` / `survey` / `task_status` / `task_cancel`。
+`tools/` 目录，一函数一文件，`manifest.py` 自动发现：`read` / `glob` / `grep` / `write` / `edit` / `bash` / `plan` / `survey` / `bg_start`。
 
 ## 技能
 

@@ -14,11 +14,9 @@ def _names():
     from history import save as save_history, load as load_history
     from manifest import list_tools, presets
     from skills import list_skills
-    import background
 
     machines = {
         "agent": agent,
-        "background": background,
         "build_system_prompt": build_system_prompt,
         "call": call,
         "chat": chat,

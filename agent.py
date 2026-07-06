@@ -2,7 +2,6 @@ import re
 import threading
 from pathlib import Path
 
-from background import run_with_timeout
 from call import call
 from compact import compact
 from history import save
@@ -15,7 +14,7 @@ from skills import list_skills
 # feedback 拼成文本喂回模型，直到模型输出纯文本（无 <!EXEC>）为止。
 
 _MAX_ITERS = 20
-_MAX_RUN_SECS = 60  # 单代码块硬超时秒数，超过则转后台由 task_status 查询
+_MAX_RUN_SECS = 60  # 单代码块硬超时秒数，超过则放弃等待、抛 TimeoutError（防止代码块永久阻塞卡住循环）
 
 # 中断协议（协作式，不打断 IPython 单元）：
 #   stop.set()    外部要求停下（Ctrl+C / 命令切换）
@@ -147,21 +146,25 @@ def feedback(results):
 def _execute_block(code):
     """执行一个代码块，返回结果或异常对象（不 raise 出去，让 feedback 分派）。
 
-    - 正常完成：返回原生 Python 值（可能是 None）
-    - 代码块内异常：返回该异常对象（含 traceback）
-    - 超时（>_MAX_RUN_SECS 秒）：返回 TimeoutError（含 task_id 引导文本），任务继续在后台
+    超时保护：代码块最多跑 _MAX_RUN_SECS 秒；超过则放弃等待、返回 TimeoutError。
+    daemon 线程：底层线程随 kernel 退出而清理；不做"转后台"任务管理——
+    模型想让某个函数在后台跑，自己用 threading.Thread + daemon=True 或 tools/bg_start。
     """
-    result, error, task_id = run_with_timeout(_run_cell, _MAX_RUN_SECS, code)
-    if task_id is not None:
-        # 超时分支：任务已转后台，替换为含引导信息的 TimeoutError
-        return TimeoutError(
-            f"运行超过 {_MAX_RUN_SECS} 秒，已转后台。task_id={task_id}，"
-            f"用 task_status / task_cancel 操作。"
-        )
-    if error is not None:
-        # 代码块内 raise 出来的异常，原样返回让 feedback 用 traceback 展示
-        return error
-    return result
+    result = [None]
+    error = [None]
+
+    def _worker():
+        try:
+            result[0] = _run_cell(code)
+        except BaseException as e:
+            error[0] = e
+
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+    t.join(timeout=_MAX_RUN_SECS)
+    if t.is_alive():
+        return TimeoutError(f"代码块超过 {_MAX_RUN_SECS} 秒未完成，agent 放弃等待。若需长任务，用 bg_start 显式起后台。")
+    return error[0] if error[0] is not None else result[0]
 
 
 def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):

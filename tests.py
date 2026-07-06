@@ -261,22 +261,19 @@ if __name__ == "__main__":
         if name.startswith("test_") and callable(fn):
             fn()
     # 接口 = 实现的 re-export：签名一致 = 同一对象。
-    import call, _call, background, _background, compact, _compact
+    import call, _call, compact, _compact
     assert call.call is _call.call, "call 接口漂移"
     assert call.default_model is _call.default_model, "call.default_model 接口漂移"
-    for fn in ("run_with_timeout", "task_status", "task_cancel"):
-        assert getattr(background, fn) is getattr(_background, fn), f"background.{fn} 接口漂移"
     assert compact.compact is _compact.compact, "compact 接口漂移"
     # 视野即依赖：上游源码不应出现 _* 实现模块名（认知链不穿透接口）。
     from pathlib import Path
-    exempt = {"_call.py", "call.py", "_background.py", "background.py",
-              "_compact.py", "compact.py",
+    exempt = {"_call.py", "call.py", "_compact.py", "compact.py",
               "tests.py"}  # 实现自身、接口（转手）、测试跨水线特权
     for src in Path(".").glob("*.py"):
         if src.name in exempt:
             continue
         text = src.read_text("utf-8")
-        for name in ("_call", "_background", "_compact"):
+        for name in ("_call", "_compact"):
             assert "from {} import".format(name) not in text, f"{src.name} 认知链穿透 {name}"
             import re
             assert not re.search(r"(?m)^\s*import\s+{}(?:\s|,|$)".format(re.escape(name)), text), f"{src.name} 认知链穿透 {name}"

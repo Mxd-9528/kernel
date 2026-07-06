@@ -1,4 +1,4 @@
-"""工具预置函数测试：read/glob/grep/write/edit/bash/plan/survey/task_status。"""
+"""工具预置函数测试：read/glob/grep/write/edit/bash/plan/survey/bg_start。"""
 
 import tempfile
 import os
@@ -289,34 +289,32 @@ def test_survey():
     print("survey ok")
 
 
-def test_task_status():
-    """task_status 返回 dict：保真任务原始返回值（不再被 str() 扁平）。"""
+def test_bg_start():
+    """bg_start 起后台线程，模型可通过 threading.Thread API 查询/等待。"""
     import time
-    from background import run_with_timeout
-    from tools.task_status import task_status
-    from tools.read import read
+    from tools.bg_start import bg_start
 
-    def slow_read():
-        time.sleep(1)
-        return read("README.md")
+    results = []
 
-    # 触发转后台
-    result, err, tid = run_with_timeout(slow_read, timeout=0.1)
-    assert tid is not None
+    def worker():
+        for i in range(3):
+            time.sleep(0.05)
+            results.append(i)
 
-    # 等完成
-    time.sleep(2)
+    t = bg_start(worker)
+    # 立即返回 Thread 对象
+    import threading
+    assert isinstance(t, threading.Thread)
+    assert t.is_alive() or len(results) > 0  # 可能已经在跑或很快跑完
 
-    # 查状态：返回 dict
-    r = task_status(tid)
-    assert isinstance(r, dict)
-    assert r["state"] == "done"
-    assert r["task_id"] == tid
-    # payload 是原始的 read 返回值（str）
-    payload = r["payload"]
-    assert isinstance(payload, str)
-    assert "1\t" in payload  # 带行号，证明未被 str() 扁平化
-    print("task_status ok")
+    # 等待完成
+    t.join(timeout=2)
+    assert not t.is_alive(), "worker 应已完成"
+    assert results == [0, 1, 2]
+
+    # daemon 保证 kernel 退出时清理
+    assert t.daemon is True
+    print("bg_start ok")
 
 
 def run_all():
