@@ -2,20 +2,22 @@
 
 run_with_timeout(fn, timeout=60, *args, **kwargs) -> (result, error, task_id)
     执行 fn(*args, **kwargs)；超过 timeout 秒转后台继续运行。三种返回姿势：
-        正常完成:   (result, None, None)
+        正常完成:   (原始返回值, None, None)
         超时转后台: (None, TimeoutError, task_id)  fn 继续后台执行。
         执行出错:   (None, exception, None)
 
-task_status(task_id, wait=None) -> Result
-    查询状态；wait 非 None 时最多续等 wait 秒。
-    Result.status ∈ {running, done, failed, cancelled, unknown}。
-    完成态（done / failed）附 result_path=<文件路径>；消费者用 read(result_path) 读结果
-    （大结果不直接返回，避免爆 token）。
-    task_id 不存在时 status='unknown'，error=KeyError。
+task_status(task_id, wait=None) -> (state, payload)
+    查询任务状态。返回原始状态元组，由上层（如 tools/task_status.py）构造 Result。
+    state ∈ {"running","done","failed","cancelled","unknown"}
+    payload 语义：
+      done → 任务原始返回值
+      failed → 原始异常对象
+      running / cancelled / unknown → None
+    wait 非 None 时最多续等 wait 秒。
 
-task_cancel(task_id) -> Result
-    尽力停止后台任务；正在运行的线程无法立即终止。
-    Result.status ∈ {cancelled, running, unknown}。
+task_cancel(task_id) -> state
+    尽力停止后台任务；正在运行的线程无法立即终止（Python 线程限制）。
+    state ∈ {"cancelled","running","unknown"}
 
 task_id 对消费者不透明：仅作句柄传递，不解析结构。
 """

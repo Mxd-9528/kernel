@@ -262,6 +262,40 @@ def test_survey():
     print("survey ok")
 
 
+def test_background_result_fidelity():
+    """回归：后台任务返回的 Result 转后台后，原 facts 完整保真（不再被 str() 扁平化）。"""
+    import time
+    from background import run_with_timeout
+    from tools.task_status import task_status
+    from tools.read import read
+
+    def slow_read():
+        time.sleep(1)
+        return read("README.md")
+
+    # 触发转后台
+    result, err, tid = run_with_timeout(slow_read, timeout=0.1)
+    assert tid is not None, "0.1s 应该转后台"
+    assert isinstance(err, TimeoutError)
+
+    # 等完成
+    time.sleep(2)
+
+    # 查状态：原 Result 的 facts 应保留
+    r = task_status(tid)
+    assert r.error is None, "任务本身应完成成功"
+    # 原 Result 的 facts 完整保真
+    assert r.facts.get("lines") is not None, "原 Result 的 lines 应保留"
+    assert r.facts.get("file_path") == "README.md", "原 file_path 应保留"
+    assert r.facts.get("bytes") is not None, "原 bytes 应保留"
+    # 新增 task_id/status
+    assert r.facts.get("task_id") == tid
+    assert r.facts.get("status") == "done"
+    # body 是原 read 结果（带行号），不是 str() 扁平化
+    assert "1\t" in str(r), "body 应含 read 的行号前缀，证明未被 str() 扁平"
+    print("background result fidelity ok")
+
+
 def run_all():
     # 自动扫本模块 test_* 函数按定义顺序执行；加测试只加 def test_xxx。
     for name, fn in list(globals().items()):
