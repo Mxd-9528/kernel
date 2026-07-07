@@ -1,6 +1,5 @@
 import json
 import os
-import time
 import urllib.request
 from pathlib import Path
 
@@ -36,24 +35,6 @@ def default_model():
     return next(iter(list_models()))
 
 
-def _prepare_request(messages, model=None, stream=False):
-    """共用：组装请求并发送，返回 HTTP 响应对象。"""
-    _load_env()
-    cfg = list_models()[model or default_model()]
-    key = os.environ.get(cfg["key_env"])
-    if not key:
-        raise RuntimeError(f"环境变量 {cfg['key_env']} 未设置——请在 .env 或系统环境变量里配置")
-    body = {"model": cfg["model"], "messages": messages}
-    if stream:
-        body["stream"] = True
-    req = urllib.request.Request(
-        cfg["url"],
-        data=json.dumps(body).encode("utf-8"),
-        headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
-    )
-    return urllib.request.urlopen(req)
-
-
 def call(messages, model=None):
     """把 messages 列表发给模型，返回它的回话文本。无状态：它不记历史，历史是调用方的事。
 
@@ -61,7 +42,18 @@ def call(messages, model=None):
     model: models.json 里的一个名字，换名字就换模型/接口。None 用默认（json 第一个）。
     key 从环境变量取（名见 models.json 的 key_env），真值存 .env，不入代码/git。
     """
-    resp = json.loads(_prepare_request(messages, model).read())
+    _load_env()
+    cfg = list_models()[model or default_model()]
+    key = os.environ.get(cfg["key_env"])
+    if not key:
+        raise RuntimeError(f"环境变量 {cfg['key_env']} 未设置——请在 .env 或系统环境变量里配置")
+    body = json.dumps({"model": cfg["model"], "messages": messages}).encode("utf-8")
+    req = urllib.request.Request(
+        cfg["url"],
+        data=body,
+        headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+    )
+    resp = json.loads(urllib.request.urlopen(req).read())
     msg = resp["choices"][0]["message"]
     reasoning = msg.get("reasoning_content")
     if reasoning:
@@ -77,10 +69,29 @@ def call_streaming(messages, model=None):
     返回完整文本，失败时 fallback 到原始 call()。
     思维链（reasoning_content）静默跳过，不占终端。
     """
+    import time
     from rich.live import Live
     from rich.markdown import Markdown
 
-    resp = _prepare_request(messages, model, stream=True)
+    _load_env()
+    cfg = list_models()[model or default_model()]
+    key = os.environ.get(cfg["key_env"])
+    if not key:
+        raise RuntimeError(f"环境变量 {cfg['key_env']} 未设置——请在 .env 或系统环境变量里配置")
+
+    body = json.dumps({
+        "model": cfg["model"],
+        "messages": messages,
+        "stream": True,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        cfg["url"],
+        data=body,
+        headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+    )
+
+    resp = urllib.request.urlopen(req)
 
     collected = ""
     live = Live(
