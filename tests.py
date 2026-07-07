@@ -263,7 +263,7 @@ if __name__ == "__main__":
     from pathlib import Path
     exempt = {"_call.py", "call.py", "_compact.py", "compact.py",
               "tests.py"}  # 实现自身、接口（转手）、测试跨水线特权
-    for src in Path(".").glob("*.py"):
+    for src in Path(__file__).parent.glob("*.py"):
         if src.name in exempt:
             continue
         text = src.read_text("utf-8")

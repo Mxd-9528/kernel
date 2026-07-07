@@ -22,7 +22,6 @@ def chat(model=None):
     model: None 用默认（models.json 第一个）。
     """
     signal.signal(signal.SIGINT, _handle_sigint)
-    import agent as agent_mod
     from call import default_model, _models
     from history import save, load
 

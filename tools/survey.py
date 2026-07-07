@@ -14,13 +14,10 @@ import inspect
 import os
 import sys
 
+from tools.exclude import _EXCLUDE
+
 _cache = {}
 _cache_fp = None
-
-_EXCLUDE = frozenset({
-    "__pycache__", ".git", ".ruff_cache", ".claude", ".venv", "venv",
-    "node_modules", ".idea", "skills",
-})
 
 
 def _summary(doc):
