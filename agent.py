@@ -2,12 +2,10 @@ import re
 import threading
 from pathlib import Path
 
-from call import call
+from call import call_streaming
 from compact import compact
 from history import save
 from manifest import list_tools
-from rich.console import Console
-from rich.markdown import Markdown
 from skills import list_skills
 
 # 自驱动循环：模型输出代码块，_run_cell 在持久内核中执行，返回原生 Python 值或异常，
@@ -171,8 +169,7 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         if stop.is_set():
             break  # chat 按了 Ctrl+C，回到输入
         messages = compact(messages, model=model)
-        reply = call(messages, model)
-        Console().print(Markdown(reply))
+        reply = call_streaming(messages, model)
         messages.append({"role": "assistant", "content": reply})
         save(messages)  # 步级存盘：模型回复即落盘
 

@@ -8,10 +8,14 @@ call(messages, model=None) -> str
     Side effects: 首次调用把 .env 加载进 os.environ（幂等）；
                   reasoning_content 以 dim 灰打印到 stdout，不进返回值也不进 messages。
 
+call_streaming(messages, model=None) -> str
+    流式版 call()：逐 token 用 Rich Live 增量渲染 Markdown。
+    用法和 call() 完全相同，接口不变，失败时自动 fallback 到 call()。
+
 default_model() -> str
     返回 models.json 首个键名。
 
 list_models() -> dict
     返回 models.json 全表；供 /model 命令枚举。
 """
-from _call import call, default_model, list_models
+from _call import call, call_streaming, default_model, list_models

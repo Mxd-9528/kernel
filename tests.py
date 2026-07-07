@@ -65,15 +65,15 @@ def test_agent():
         '做完了，结果是 12。',
     ])
     import agent as agent_mod
-    original = agent_mod.call
-    agent_mod.call = lambda *a, **kw: next(fake_replies)
+    original = agent_mod.call_streaming
+    agent_mod.call_streaming = lambda *a, **kw: next(fake_replies)
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             result, _ = agent("测试：算 1+1，再算 3*4")
         assert result == "做完了，结果是 12。", repr(result)
         print("agent ok")
     finally:
-        agent_mod.call = original
+        agent_mod.call_streaming = original
 
 
 def test_manifest():
