@@ -63,7 +63,6 @@ def chat(model=None):
         # 自由文本：进入 agent
         agent_mod.stop.clear()
         result, messages = agent_mod.agent(you, messages, model)
-        save(messages)  # 步级存盘：每轮后落盘
         if agent_mod.stop.is_set():
             print("\n（已停止）")
             agent_mod.stop.clear()

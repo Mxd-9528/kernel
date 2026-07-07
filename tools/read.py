@@ -26,7 +26,7 @@ def _read_text(file_path, offset=None, limit=None):
     with open(file_path, encoding="utf-8") as f:
         lines = f.readlines()
 
-    start = (offset or 1) - 1
+    start = (offset if offset is not None else 1) - 1
     end = start + limit if limit is not None else len(lines)
     chunk = lines[start:end]
     line_start = start + 1
@@ -47,7 +47,7 @@ def _read_pdf(file_path, offset=None, limit=None):
 
     with pdfplumber.open(file_path) as pdf:
         total = len(pdf.pages)
-        start = (offset or 1) - 1
+        start = (offset if offset is not None else 1) - 1
         end = start + limit if limit is not None else total
         pages = pdf.pages[start:end]
 

@@ -53,7 +53,7 @@ def call(messages, model=None):
         data=body,
         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
     )
-    resp = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    resp = json.loads(urllib.request.urlopen(req).read())
     msg = resp["choices"][0]["message"]
     reasoning = msg.get("reasoning_content")
     if reasoning:
