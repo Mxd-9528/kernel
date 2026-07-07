@@ -11,7 +11,7 @@ call(messages, model=None) -> str
 default_model() -> str
     返回 models.json 首个键名。
 
-_models() -> dict
+list_models() -> dict
     返回 models.json 全表；供 /model 命令枚举。
 """
-from _call import call, default_model, _models
+from _call import call, default_model, list_models

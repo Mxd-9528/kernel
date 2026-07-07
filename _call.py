@@ -26,13 +26,13 @@ def _load_env():
         os.environ.setdefault(k.strip(), v.strip())
 
 
-def _models():
+def list_models():
     return json.loads((Path(__file__).parent / "models.json").read_text("utf-8"))
 
 
 def default_model():
     """默认模型 = models.json 里的第一个（dict 保序）。换默认就把它挪到 json 最前。"""
-    return next(iter(_models()))
+    return next(iter(list_models()))
 
 
 def call(messages, model=None):
@@ -43,7 +43,7 @@ def call(messages, model=None):
     key 从环境变量取（名见 models.json 的 key_env），真值存 .env，不入代码/git。
     """
     _load_env()
-    cfg = _models()[model or default_model()]
+    cfg = list_models()[model or default_model()]
     key = os.environ.get(cfg["key_env"])
     if not key:
         raise RuntimeError(f"环境变量 {cfg['key_env']} 未设置——请在 .env 或系统环境变量里配置")

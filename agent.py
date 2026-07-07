@@ -4,7 +4,6 @@ from pathlib import Path
 
 from call import call
 from compact import compact
-from history import save
 from manifest import list_tools
 from rich.console import Console
 from rich.markdown import Markdown
@@ -174,7 +173,6 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
         reply = call(messages, model)
         Console().print(Markdown(reply))
         messages.append({"role": "assistant", "content": reply})
-        save(messages)  # 步级存盘：模型回复即落盘
 
         blocks = [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
         if not blocks:
@@ -182,6 +180,5 @@ def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
 
         results = [_execute_block(b) for b in blocks]
         messages.append({"role": "user", "content": feedback(results)})
-        save(messages)  # 步级存盘：环境反馈即落盘
 
     return reply, messages

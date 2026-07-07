@@ -22,7 +22,8 @@ def chat(model=None):
     model: None 用默认（models.json 第一个）。
     """
     signal.signal(signal.SIGINT, _handle_sigint)
-    from call import default_model, _models
+    import agent as agent_mod
+    from call import default_model, list_models
     from history import save, load
 
     model = model or default_model()
@@ -42,7 +43,7 @@ def chat(model=None):
             print("已开新对话。")
             continue
         if you.startswith("/model"):
-            models = _models()
+            models = list_models()
             name = you[len("/model"):].strip()
             if not name:
                 print(f"当前模型：{model}。可选：{', '.join(models)}")
@@ -62,6 +63,7 @@ def chat(model=None):
         # 自由文本：进入 agent
         agent_mod.stop.clear()
         result, messages = agent_mod.agent(you, messages, model)
+        save(messages)  # 步级存盘：每轮后落盘
         if agent_mod.stop.is_set():
             print("\n（已停止）")
             agent_mod.stop.clear()
