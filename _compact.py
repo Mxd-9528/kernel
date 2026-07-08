@@ -5,7 +5,9 @@
 触发用字符数估算（粗略但够；token 精确但要 tokenizer，YAGNI）。
 """
 
-from call import call
+import json
+
+from _llm import stream_chat
 
 KEEP_ROUNDS = 6       # 保留最近几轮完整对话（数 assistant）
 THRESHOLD = 50_000    # 中间可压部分超过多少字符就触发
@@ -79,7 +81,7 @@ def split_history(history, keep=KEEP_ROUNDS):
 
 def compact(history, keep=KEEP_ROUNDS, threshold=THRESHOLD, model=None):
     """压缩 history：中间部分字符数超 threshold 才压。未达阈值原样返回。
-    压缩时摘要中间部分，作 user/assistant 对插回。model 用于调用压缩 LLM。"""
+    压缩时摘要中间部分，作 user/assistant 对回插。model 用于调用压缩 LLM。"""
     system, mid, recent = split_history(history, keep)
     if not mid or _chars(mid) <= threshold:
         return history
@@ -93,9 +95,8 @@ def compact(history, keep=KEEP_ROUNDS, threshold=THRESHOLD, model=None):
 
 def compress(messages, model):
     """把待压消息拼成压缩请求并调用模型，返回摘要文本。提出来独立可测 COMPRESS_PROMPT 拼装。"""
-    import json
     req = [
         {"role": "system", "content": COMPRESS_PROMPT},
         {"role": "user", "content": json.dumps(messages, ensure_ascii=False)},
     ]
-    return call(req, model)
+    return "".join(stream_chat(req, model))

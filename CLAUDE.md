@@ -22,12 +22,12 @@ uvx ruff check .          # Python 3.8 静态检查
 | 文件 | 职责 |
 |---|---|
 | `chat.py` | 交互入口：输入循环、斜杠命令、调用 agent、持久化历史 |
-| `agent.py` | 自驱动循环 + IPython 内核驱动（`_run_cell`）：LLM 回复 → 提取代码块 → 执行 → 反馈 → 重复 |
-| `call.py` / `_call.py` | LLM 调用接口 / 实现 |
-| `compact.py` / `_compact.py` | 上下文压缩接口 (触发判定、结构化摘要) / 实现 |
+| `agent.py` | 自驱动循环编排 + 流式 HTTP 调用：LLM 回复 → 提取代码块 → 执行 → 反馈 → 重复 |
+| `_llm.py` | LLM 调用工具：读配置、发请求、取回复 |
+| `_display.py` | Rich Live 终端渲染，纯显示 |
+| `_compact.py` | 上下文压缩 (触发判定、结构化摘要) |
 | `inject.py` | `shell.push` 将对象推入 IPython `user_ns`，幂等 |
-| `manifest.py` | `tools/` 目录自动发现 |
-| `skills.py` | `skills/*/SKILL.md` 自动发现 |
+| `_system.py` | `tools/` 目录自动发现 + `skills/*/SKILL.md` 自动发现 + 系统提示组装 |
 | `history.py` | 对话历史持久化 |
 | `models.json` | LLM 端点配置；默认模型为首个键 |
 
@@ -37,8 +37,7 @@ uvx ruff check .          # Python 3.8 静态检查
 
 **上游依赖规则**：
 
-- 所有 `.py` 文件（包括模型生成的 `<!EXEC>` 代码块）import 底层能力时只写 `from call import ...` / `from compact import ...`。
-- 禁止 `from _call import ...` 及同类形式；下划线前缀的模块名不应出现在上游源码中。
+- 下划线前缀的模块名 (`_compact`, `_llm`, `_system` 等) 不应出现在非豁免的上游源码中。
 - 接口与实现出现冲突时，修改实现使其符合接口，除非架构师明确决定修订接口。
 - 新增接口 (封装为深模块) 的准入门槛：功能已收敛、接口 10–25 行覆盖对外全部行为、上游无需访问实现内部。
 
@@ -54,11 +53,11 @@ uvx ruff check .          # Python 3.8 静态检查
 
 ## 预置函数
 
-`tools/` 目录，一函数一文件，`manifest.py` 自动发现：`read` / `glob` / `grep` / `write` / `edit` / `bash` / `plan` / `survey` / `bg_start`。
+`tools/` 目录，一函数一文件，`_system.py` 自动发现：`read` / `glob` / `grep` / `write` / `edit` / `bash` / `plan` / `survey` / `bg_start`。
 
 ## 技能
 
-`skills/<name>/SKILL.md` 文件，含 YAML frontmatter；`skills.py` 扫描注册元数据；正文按需通过 `read()` 加载。
+`skills/<name>/SKILL.md` 文件，含 YAML frontmatter；`_system.py` 扫描注册元数据；正文按需通过 `read()` 加载。
 
 ## 硬约束
 

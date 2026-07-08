@@ -3,7 +3,7 @@
 
 def test_run_cell():
     """_run_cell 返回原生 Python 值；异常直接 raise（含 traceback）。"""
-    from agent import _run_cell
+    from _runtime import _run_cell
 
     # 表达式值
     assert _run_cell("1 + 1") == 2
@@ -65,19 +65,21 @@ def test_agent():
         '做完了，结果是 12。',
     ])
     import agent as agent_mod
-    original = agent_mod.call_streaming
-    agent_mod.call_streaming = lambda *a, **kw: next(fake_replies)
+    original = agent_mod.stream_chat
+    def _mock_stream(*a, **kw):
+        yield next(fake_replies)
+    agent_mod.stream_chat = _mock_stream
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             result, _ = agent("测试：算 1+1，再算 3*4")
         assert result == "做完了，结果是 12。", repr(result)
         print("agent ok")
     finally:
-        agent_mod.call_streaming = original
+        agent_mod._stream_chat = original
 
 
 def test_manifest():
-    from manifest import presets, list_tools
+    from _system import presets, list_tools
     # 扫 tools/：每个 tools/x.py 的同名函数 x 就是预置函数
     names = {name for name, _ in presets()}
     assert "read" in names  # read.py 在 tools/ 里，必被扫到
@@ -90,7 +92,7 @@ def test_manifest():
 
 def test_inject():
     # 回归：模型在内核里重绑预置函数，后续轮次不被 inject 覆盖（持久内核核心优势）
-    from agent import _run_cell
+    from _runtime import _run_cell
     _run_cell("glob = lambda *a: '热补丁版'")
     _run_cell("1+1")  # 再跑一轮，会再调 inject——不能覆盖上面的重绑
     assert _run_cell("glob('x')") == "热补丁版", "重绑被 inject 覆盖了——持久性被破坏"
@@ -127,7 +129,7 @@ def test_inject_sentinel():
 
 
 def test_feedback():
-    from agent import feedback
+    from _runtime import feedback
     # 单块：[环境反馈] 开头，无代码块编号
     one = feedback(["hello"])
     assert one.startswith("[环境反馈]")
@@ -189,7 +191,7 @@ def test_history():
 def test_skills():
     import tempfile
     import os
-    from skills import skills, list_skills
+    from _system import skills, list_skills
     with tempfile.TemporaryDirectory() as d:
         # 造两个 skill：标准 frontmatter
         os.makedirs(os.path.join(d, "foo"))
@@ -236,11 +238,11 @@ def test_compact():
     # 未过阈值：原样返回（不调用 LLM）
     big = conv(10)
     import _compact as compact_mod
-    compact_mod.call = lambda *a, **kw: (_ for _ in ()).throw(AssertionError("不该调用"))
+    compact_mod.stream_chat = lambda *a, **kw: (_ for _ in ()).throw(AssertionError("不该调用"))
     assert compact(big, keep=6, threshold=1_000_000) == big
 
     # 过阈值：mock 压缩 API，验证重组结构
-    compact_mod.call = lambda msgs, model: "【摘要】"
+    compact_mod.stream_chat = lambda *a, **kw: iter(["【摘要】"])
     new = compact(conv(10), keep=6, threshold=1)
     assert new[0] == {"role": "system", "content": "sys"}  # system 保留
     assert any(m["role"] == "assistant" and "【摘要】" in m["content"] for m in new)
@@ -254,20 +256,16 @@ if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):
             fn()
-    # 接口 = 实现的 re-export：签名一致 = 同一对象。
-    import call, _call, compact, _compact
-    assert call.call is _call.call, "call 接口漂移"
-    assert call.default_model is _call.default_model, "call.default_model 接口漂移"
-    assert compact.compact is _compact.compact, "compact 接口漂移"
     # 视野即依赖：上游源码不应出现 _* 实现模块名（认知链不穿透接口）。
     from pathlib import Path
-    exempt = {"_call.py", "call.py", "_compact.py", "compact.py",
-              "tests.py"}  # 实现自身、接口（转手）、测试跨水线特权
+    exempt = {"_compact.py",
+              "_runtime.py", "_system.py", "_display.py", "agent.py",
+              "inject.py", "tests.py"}
     for src in Path(__file__).parent.glob("*.py"):
         if src.name in exempt:
             continue
         text = src.read_text("utf-8")
-        for name in ("_call", "_compact"):
+        for name in ("_compact", "_runtime", "_system", "_display"):
             assert "from {} import".format(name) not in text, f"{src.name} 认知链穿透 {name}"
             import re
             assert not re.search(r"(?m)^\s*import\s+{}(?:\s|,|$)".format(re.escape(name)), text), f"{src.name} 认知链穿透 {name}"

@@ -8,12 +8,11 @@
 def _names():
     import inspect  # 预注入：对象反查看源码是核心动作（inspect.getsourcelines(对象)→文件:行号）
     from agent import agent, build_system as build_system_prompt
-    from call import call
+    from _system import list_tools, list_skills, presets
+    from _llm import call
     from chat import chat
-    from compact import compact
+    from _compact import compact
     from history import save as save_history, load as load_history
-    from manifest import list_tools, presets
-    from skills import list_skills
 
     machines = {
         "agent": agent,

@@ -1,6 +1,8 @@
 
 import signal
 
+from _llm import _list_models, _default_model
+
 
 def _handle_sigint(signum, frame):
     import agent as agent_mod
@@ -23,10 +25,9 @@ def chat(model=None):
     """
     signal.signal(signal.SIGINT, _handle_sigint)
     import agent as agent_mod
-    from call import default_model, list_models
     from history import save, load
 
-    model = model or default_model()
+    model = model or _default_model()
     messages = load()  # 自动接续上次对话；无历史则 None
     while True:
         try:
@@ -43,7 +44,7 @@ def chat(model=None):
             print("已开新对话。")
             continue
         if you.startswith("/model"):
-            models = list_models()
+            models = _list_models()
             name = you[len("/model"):].strip()
             if not name:
                 print(f"当前模型：{model}。可选：{', '.join(models)}")
