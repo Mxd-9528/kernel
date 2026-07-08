@@ -5,7 +5,7 @@ from _display import render_stream
 from _llm import call as _call, stream_chat
 from _runtime import _EXEC_PATTERN, _execute_block, feedback
 from _system import build_system
-from _compact import compact
+from compact import compact
 from history import save
 
 # 自驱动循环：模型输出代码块，_execute_block 在持久内核中执行，返回原生 Python 值或异常，

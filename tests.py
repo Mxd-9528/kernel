@@ -217,7 +217,7 @@ def test_skills():
 
 
 def test_compact():
-    from _compact import split_history, compact
+    from compact import split_history, compact
 
     def conv(n):
         # 造 n 轮对话：每轮 user + assistant
@@ -237,7 +237,7 @@ def test_compact():
 
     # 未过阈值：原样返回（不调用 LLM）
     big = conv(10)
-    import _compact as compact_mod
+    import compact as compact_mod
     compact_mod.stream_chat = lambda *a, **kw: (_ for _ in ()).throw(AssertionError("不该调用"))
     assert compact(big, keep=6, threshold=1_000_000) == big
 
@@ -256,20 +256,6 @@ if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):
             fn()
-    # 视野即依赖：上游源码不应出现 _* 实现模块名（认知链不穿透接口）。
-    from pathlib import Path
-    exempt = {"_compact.py",
-              "_runtime.py", "_system.py", "_display.py", "agent.py",
-              "inject.py", "tests.py"}
-    for src in Path(__file__).parent.glob("*.py"):
-        if src.name in exempt:
-            continue
-        text = src.read_text("utf-8")
-        for name in ("_compact", "_runtime", "_system", "_display"):
-            assert "from {} import".format(name) not in text, f"{src.name} 认知链穿透 {name}"
-            import re
-            assert not re.search(r"(?m)^\s*import\s+{}(?:\s|,|$)".format(re.escape(name)), text), f"{src.name} 认知链穿透 {name}"
-    print("contract ok")
     import tests_tools
     tests_tools.run_all()
     print("全部通过")

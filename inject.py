@@ -11,7 +11,7 @@ def _names():
     from _system import list_tools, list_skills, presets
     from _llm import call
     from chat import chat
-    from _compact import compact
+    from compact import compact
     from history import save as save_history, load as load_history
 
     machines = {

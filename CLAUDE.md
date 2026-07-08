@@ -25,23 +25,11 @@ uvx ruff check .          # Python 3.8 静态检查
 | `agent.py` | 自驱动循环编排 + 流式 HTTP 调用：LLM 回复 → 提取代码块 → 执行 → 反馈 → 重复 |
 | `_llm.py` | LLM 调用工具：读配置、发请求、取回复 |
 | `_display.py` | Rich Live 终端渲染，纯显示 |
-| `_compact.py` | 上下文压缩 (触发判定、结构化摘要) |
+| `compact.py` | 上下文压缩 (触发判定、结构化摘要) |
 | `inject.py` | `shell.push` 将对象推入 IPython `user_ns`，幂等 |
 | `_system.py` | `tools/` 目录自动发现 + `skills/*/SKILL.md` 自动发现 + 系统提示组装 |
 | `history.py` | 对话历史持久化 |
 | `models.json` | LLM 端点配置；默认模型为首个键 |
-
-## 面向接口编程 (Program to an interface, not an implementation; Gamma et al. 1994)
-
-**接口层与实现层分离**：接口占用无下划线的公开名 (`call.py`)，实现下沉带下划线前缀 (`_call.py`)。此为 PEP 8 私有命名约定，与 CPython 标准库 `_ssl` / `_socket` / `_json` 同构。
-
-**上游依赖规则**：
-
-- 下划线前缀的模块名 (`_compact`, `_llm`, `_system` 等) 不应出现在非豁免的上游源码中。
-- 接口与实现出现冲突时，修改实现使其符合接口，除非架构师明确决定修订接口。
-- 新增接口 (封装为深模块) 的准入门槛：功能已收敛、接口 10–25 行覆盖对外全部行为、上游无需访问实现内部。
-
-**静态验证**：`tests.py` 通过正则扫描所有 `.py` 文件，检测 `from _xxx import` 与 `import _xxx` 语句。命中即为封装泄漏 (encapsulation leak)。接口文件本身与 `tests.py` 豁免（前者为唯一合法转手点，后者拥有跨层测试特权）。
 
 ## 返回值与错误传递
 
@@ -58,6 +46,17 @@ uvx ruff check .          # Python 3.8 静态检查
 ## 技能
 
 `skills/<name>/SKILL.md` 文件，含 YAML frontmatter；`_system.py` 扫描注册元数据；正文按需通过 `read()` 加载。
+
+## 接口哲学
+
+**不为单消费者设置接口层。** 接口层的价值在于隔离多处调用者与实现之间的依赖。只有一个消费者时，接口层只是多一个文件需要打开，增加认知负荷而不提供隔离收益。
+
+`_` 前缀的模块（`_llm`、`_display`、`_runtime`、`_system`）是 PEP 8 私有命名约定，标识"内部实现细节"。它们被直接 import 是正常用法，不是封装泄漏。
+
+仅当满足以下条件时，才考虑新增接口层（如 `call.py` 之于 `_call.py`）：
+- 功能已收敛、接口稳定
+- 有多个独立消费者
+- 接口面积（10–25 行）远小于实现面积
 
 ## 硬约束
 
