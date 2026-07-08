@@ -1,10 +1,10 @@
 import re
 import threading
 
-from _display import render_stream
-from _llm import call as _call, stream_chat
-from _runtime import _EXEC_PATTERN, _execute_block, feedback
-from _system import build_system
+from display import render_stream
+from llm import call as _call, stream_chat
+from runtime import _EXEC_PATTERN, _execute_block, feedback
+from system import build_system
 from compact import compact
 from history import save
 

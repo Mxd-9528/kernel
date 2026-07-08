@@ -3,7 +3,7 @@
 
 def test_run_cell():
     """_run_cell 返回原生 Python 值；异常直接 raise（含 traceback）。"""
-    from _runtime import _run_cell
+    from runtime import _run_cell
 
     # 表达式值
     assert _run_cell("1 + 1") == 2
@@ -79,7 +79,7 @@ def test_agent():
 
 
 def test_manifest():
-    from _system import presets, list_tools
+    from system import presets, list_tools
     # 扫 tools/：每个 tools/x.py 的同名函数 x 就是预置函数
     names = {name for name, _ in presets()}
     assert "read" in names  # read.py 在 tools/ 里，必被扫到
@@ -92,7 +92,7 @@ def test_manifest():
 
 def test_inject():
     # 回归：模型在内核里重绑预置函数，后续轮次不被 inject 覆盖（持久内核核心优势）
-    from _runtime import _run_cell
+    from runtime import _run_cell
     _run_cell("glob = lambda *a: '热补丁版'")
     _run_cell("1+1")  # 再跑一轮，会再调 inject——不能覆盖上面的重绑
     assert _run_cell("glob('x')") == "热补丁版", "重绑被 inject 覆盖了——持久性被破坏"
@@ -129,7 +129,7 @@ def test_inject_sentinel():
 
 
 def test_feedback():
-    from _runtime import feedback
+    from runtime import feedback
     # 单块：[环境反馈] 开头，无代码块编号
     one = feedback(["hello"])
     assert one.startswith("[环境反馈]")
@@ -191,7 +191,7 @@ def test_history():
 def test_skills():
     import tempfile
     import os
-    from _system import skills, list_skills
+    from system import skills, list_skills
     with tempfile.TemporaryDirectory() as d:
         # 造两个 skill：标准 frontmatter
         os.makedirs(os.path.join(d, "foo"))

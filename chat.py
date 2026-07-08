@@ -1,7 +1,7 @@
 
 import signal
 
-from _llm import _list_models, _default_model
+from llm import _list_models, _default_model
 
 
 def _handle_sigint(signum, frame):

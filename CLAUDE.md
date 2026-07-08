@@ -23,11 +23,11 @@ uvx ruff check .          # Python 3.8 静态检查
 |---|---|
 | `chat.py` | 交互入口：输入循环、斜杠命令、调用 agent、持久化历史 |
 | `agent.py` | 自驱动循环编排 + 流式 HTTP 调用：LLM 回复 → 提取代码块 → 执行 → 反馈 → 重复 |
-| `_llm.py` | LLM 调用工具：读配置、发请求、取回复 |
-| `_display.py` | Rich Live 终端渲染，纯显示 |
+| `llm.py` | LLM 调用工具：读配置、发请求、取回复 |
+| `display.py` | Rich Live 终端渲染，纯显示 |
 | `compact.py` | 上下文压缩 (触发判定、结构化摘要) |
 | `inject.py` | `shell.push` 将对象推入 IPython `user_ns`，幂等 |
-| `_system.py` | `tools/` 目录自动发现 + `skills/*/SKILL.md` 自动发现 + 系统提示组装 |
+| `system.py` | `tools/` 目录自动发现 + `skills/*/SKILL.md` 自动发现 + 系统提示组装 |
 | `history.py` | 对话历史持久化 |
 | `models.json` | LLM 端点配置；默认模型为首个键 |
 
@@ -41,17 +41,17 @@ uvx ruff check .          # Python 3.8 静态检查
 
 ## 预置函数
 
-`tools/` 目录，一函数一文件，`_system.py` 自动发现：`read` / `glob` / `grep` / `write` / `edit` / `bash` / `plan` / `survey` / `bg_start`。
+`tools/` 目录，一函数一文件，`system.py` 自动发现：`read` / `glob` / `grep` / `write` / `edit` / `bash` / `plan` / `survey` / `bg_start`。
 
 ## 技能
 
-`skills/<name>/SKILL.md` 文件，含 YAML frontmatter；`_system.py` 扫描注册元数据；正文按需通过 `read()` 加载。
+`skills/<name>/SKILL.md` 文件，含 YAML frontmatter；`system.py` 扫描注册元数据；正文按需通过 `read()` 加载。
 
 ## 接口哲学
 
 **不为单消费者设置接口层。** 接口层的价值在于隔离多处调用者与实现之间的依赖。只有一个消费者时，接口层只是多一个文件需要打开，增加认知负荷而不提供隔离收益。
 
-`_` 前缀的模块（`_llm`、`_display`、`_runtime`、`_system`）是 PEP 8 私有命名约定，标识"内部实现细节"。它们被直接 import 是正常用法，不是封装泄漏。
+`_` 前缀标识文件为内部实现细节。如 `_call.py` 是 `call.py` 的实现层。无对应接口的模块（`llm`、`display`、`runtime`、`system`、`compact`）直接 import 即可。
 
 仅当满足以下条件时，才考虑新增接口层（如 `call.py` 之于 `_call.py`）：
 - 功能已收敛、接口稳定
