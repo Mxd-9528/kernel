@@ -118,3 +118,23 @@ def _execute_block(code):
     if t.is_alive():
         return TimeoutError(f"代码块超过 {_MAX_RUN_SECS} 秒未完成，agent 放弃等待。若需长任务，用 bg_start 显式起后台。")
     return error[0] if error[0] is not None else result[0]
+
+
+# ── 事件注册：收到 execute 事件 → 执行代码块 → 追2 ──────────────────
+
+from agent import on, stop
+
+
+@on("execute")
+def _on_execute(state):
+    """提取代码块，执行，追2。"""
+    if stop.is_set():
+        return
+    reply = state.messages[-1]["content"]
+
+    blocks = [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
+    if not blocks:
+        return
+
+    results = [_execute_block(b) for b in blocks]
+    state.messages.append({"role": "user", "content": feedback(results)})

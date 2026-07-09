@@ -7,7 +7,8 @@
 
 def _names():
     import inspect  # 预注入：对象反查看源码是核心动作（inspect.getsourcelines(对象)→文件:行号）
-    from agent import agent, build_system as build_system_prompt
+    from agent import agent
+    from system import build_system as build_system_prompt
     from system import list_tools, list_skills, presets
     from llm import call
     from chat import chat

@@ -13,7 +13,7 @@ KEEP_ROUNDS = 6       # 保留最近几轮完整对话（数 assistant）
 THRESHOLD = 50_000    # 中间可压部分超过多少字符就触发
 
 COMPRESS_PROMPT = """你正在对一个 AI 编程助手的对话历史做结构化压缩。
-你的输出会替换对话中较旧的部分，最近几轮完整保留。压缩后模型应能无缝继续工作。
+你的输出会替换对话，压缩后模型应能无缝继续工作。
 
 压缩不是降采样式摘要（那会丢核心思想），而是两层并行：
 ① 事实层——原样照抄，不转述、不诠释、不"优化措辞"；
@@ -100,3 +100,25 @@ def compress(messages, model):
         {"role": "user", "content": json.dumps(messages, ensure_ascii=False)},
     ]
     return "".join(stream_chat(req, model))
+
+
+def maybe_compact(state, model=None):
+    """如果 state.messages 超过阈值，压缩并原地替换 state.messages。"""
+    system, mid, recent = split_history(state.messages)
+    if not mid or _chars(mid) <= THRESHOLD:
+        return
+    summary = compress(mid, model)
+    bridge = [
+        {"role": "user", "content": "（以下是已压缩的旧上下文摘要）"},
+        {"role": "assistant", "content": summary},
+    ]
+    state.messages = system + bridge + recent
+
+
+# ── 事件注册：发消息前自动压缩 ──────────────────────────────────
+
+from agent import on
+
+@on("before_send")
+def _before_send(state):
+    maybe_compact(state, getattr(state, "model", None))

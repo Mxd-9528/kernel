@@ -12,7 +12,7 @@
 pip install -e .          # 安装依赖
 python chat.py            # 启动对话
 python tests.py           # 运行测试
-uvx ruff check .          # Python 3.8 静态检查
+uvx ruff check .          # Python 3.10
 ```
 
 对话内命令：`exit` 退出；`/new` 清空历史；`/model <名>` 切换模型。
@@ -31,36 +31,7 @@ uvx ruff check .          # Python 3.8 静态检查
 | `history.py` | 对话历史持久化 |
 | `models.json` | LLM 端点配置；默认模型为首个键 |
 
-## 返回值与错误传递
-
-预置函数返回 **Python 原生类型**：`str` / `list` / `dict` / `subprocess.CompletedProcess` 等。**失败通过 `raise` 传递原生异常**（Python 惯例）——`FileNotFoundError` / `ValueError` / `subprocess.TimeoutExpired` 等。
-
-**无自造包装类**（无 Result 三元组）——模型天然识别标准类型，无需被教。功能实现（如 `read` 加行号、`edit` 唯一匹配容错）保留在预置函数内部，是"少写几行代码 + 深思熟虑"的价值兑现；返回容器仅用 Python 标准类型。
-
-**bash 特例**：命令退出码非零**不是异常**——`bash("exit 1")` 正常返回 `subprocess.CompletedProcess`，`.returncode == 1`。判断命令成败查 `.returncode`。
-
-## 预置函数
-
-`tools/` 目录，一函数一文件，`system.py` 自动发现：`read` / `glob` / `grep` / `write` / `edit` / `bash` / `plan` / `survey` / `bg_start`。
-
-## 技能
-
-`skills/<name>/SKILL.md` 文件，含 YAML frontmatter；`system.py` 扫描注册元数据；正文按需通过 `read()` 加载。
-
-## 接口哲学
-
-**不为单消费者设置接口层。** 接口层的价值在于隔离多处调用者与实现之间的依赖。只有一个消费者时，接口层只是多一个文件需要打开，增加认知负荷而不提供隔离收益。
-
-`_` 前缀标识文件为内部实现细节。如 `_call.py` 是 `call.py` 的实现层。无对应接口的模块（`llm`、`display`、`runtime`、`system`、`compact`）直接 import 即可。
-
-仅当满足以下条件时，才考虑新增接口层（如 `call.py` 之于 `_call.py`）：
-- 功能已收敛、接口稳定
-- 有多个独立消费者
-- 接口面积（10–25 行）远小于实现面积
-
 ## 硬约束
 
-- **同进程单例**：修改磁盘代码后需重启 `python chat.py`。强隔离通过子进程 (`bash('python -c ...')`) 实现，不通过重置内核。
-- **Python 3.8 兼容**：不使用 `dict |`、`list[int]`、`str.removeprefix` 等 3.9+ 语法。
 - **约定优于配置**：`tools/` 与 `skills/*/SKILL.md` 通过文件系统扫描自动接入，新增能力仅需创建文件。
 - **最小预置**：Python 标准库一行代码可完成的操作不封装为预置函数。

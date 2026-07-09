@@ -1,57 +1,52 @@
+"""事件系统 + 纯 agent（循环节奏，零业务填充）。"""
 import re
 import threading
+from types import SimpleNamespace
 
-from display import render_stream
-from llm import call as _call, stream_chat
-from runtime import _EXEC_PATTERN, _execute_block, feedback
-from system import build_system
-from compact import compact
-from history import save
 
-# 自驱动循环：模型输出代码块，_execute_block 在持久内核中执行，返回原生 Python 值或异常，
-# feedback 拼成文本喂回模型，直到模型输出纯文本（无 <!EXEC>）为止。
+_hooks = {}
+
+def on(event):
+    """注册事件处理器。"""
+    def decorator(fn):
+        _hooks.setdefault(event, []).append(fn)
+        return fn
+    return decorator
+
+def emit(event, *args, **kwargs):
+    """触发事件，依次调用所有已注册的处理器。"""
+    for fn in _hooks.get(event, []):
+        fn(*args, **kwargs)
+
+
+# 协作式中断。业务处理器检查此标志，设置后停止下一轮。
+stop = threading.Event()
 
 _MAX_ITERS = 20
 
-# 中断协议（协作式，不打断 IPython 单元）
-stop = threading.Event()
+# 代码块检测正则——循环控制的一部分，不是业务。
+_EXEC_PATTERN = r"<!EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
 
 
-def agent(prompt, messages=None, model=None, max_iters=_MAX_ITERS):
-    """启动模型自驱动执行循环。
+def agent(prompt, state=None, max_iters=_MAX_ITERS):
+    """循环：发 → 追1 → 检查 → 追2 → 重复。业务填充通过事件注入。"""
+    if state is None:
+        state = SimpleNamespace(messages=[])
+    state.messages.append({"role": "user", "content": prompt})
 
-    prompt: 本轮用户任务。
-    messages: 跨轮历史列表（chat 持有并复用）。None 时新建一段带 system 的历史。
-    model: models.json 里的模型名。None 用默认（json 第一个）。
-    max_iters: 单轮最多跑几次执行循环，防止无限循环。
-    """
-
-    if messages is None:
-        messages = [{"role": "system", "content": build_system()}]
-    messages.append({"role": "user", "content": prompt})
-
-    reply = ""
     for _ in range(max_iters):
         if stop.is_set():
-            break  # chat 按了 Ctrl+C，回到输入
-        messages = compact(messages, model=model)
-        try:
-            reply = render_stream(stream_chat(messages, model))
-        except Exception:
-            from rich.console import Console
-            from rich.markdown import Markdown
-            Console().print("\n[流式失败，fallback 到普通调用]")
-            reply = _call(messages, model)
-            Console().print(Markdown(reply))
-        messages.append({"role": "assistant", "content": reply})
-        save(messages)  # 步级存盘：模型回复即落盘
+            break
 
+        emit("before_send", state)   # → compact.py
+        emit("send", state)          # → llm.py：发请求 + 追1
+        emit("after_assistant", state)
+
+        reply = state.messages[-1]["content"]
         blocks = [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
         if not blocks:
-            return reply, messages  # 纯文本 = 模型收尾
+            return state  # 纯文本 = 结束
 
-        results = [_execute_block(b) for b in blocks]
-        messages.append({"role": "user", "content": feedback(results)})
-        save(messages)  # 步级存盘：环境反馈即落盘
+        emit("execute", state)       # → runtime.py：执行 + 追2
 
-    return reply, messages
+    return state

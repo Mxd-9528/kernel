@@ -46,11 +46,7 @@ def call(messages, model=None):
         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
     )
     resp = json.loads(urllib.request.urlopen(req).read())
-    msg = resp["choices"][0]["message"]
-    reasoning = msg.get("reasoning_content")
-    if reasoning:
-        print("\033[2m" + reasoning + "\033[0m")
-    return msg["content"]
+    return resp["choices"][0]["message"]["content"]
 
 
 def stream_chat(messages, model=None):
@@ -95,3 +91,24 @@ def stream_chat(messages, model=None):
         content = delta.get("content", "")
         if content:
             yield content
+
+
+# ── 事件注册：收到 send 事件 → 发请求 → 追1 ──────────────────────────
+
+from agent import on, stop
+from display import render_stream
+
+
+@on("send")
+def _on_send(state):
+    """发请求，取回复，追加到 state.messages。"""
+    if stop.is_set():
+        return
+    model = getattr(state, "model", None)
+
+    try:
+        reply = render_stream(stream_chat(state.messages, model))
+    except Exception:
+        reply = call(state.messages, model)
+
+    state.messages.append({"role": "assistant", "content": reply})

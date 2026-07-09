@@ -1,12 +1,20 @@
 
 import signal
+from types import SimpleNamespace
 
 from llm import _list_models, _default_model
 
+# 导入业务模块触发事件注册
+import llm
+import compact
+import runtime
+from agent import agent, stop
+from history import save, load
+
 
 def _handle_sigint(signum, frame):
-    import agent as agent_mod
-    agent_mod.stop.set()
+    from agent import stop
+    stop.set()
 
 
 _HELP = """内置命令：
@@ -24,11 +32,12 @@ def chat(model=None):
     model: None 用默认（models.json 第一个）。
     """
     signal.signal(signal.SIGINT, _handle_sigint)
-    import agent as agent_mod
-    from history import save, load
 
     model = model or _default_model()
     messages = load()  # 自动接续上次对话；无历史则 None
+    if messages is None:
+        from system import build_system
+        messages = [{"role": "system", "content": build_system()}]
     while True:
         try:
             you = input("> ")
@@ -62,11 +71,14 @@ def chat(model=None):
             continue
 
         # 自由文本：进入 agent
-        agent_mod.stop.clear()
-        result, messages = agent_mod.agent(you, messages, model)
-        if agent_mod.stop.is_set():
+        stop.clear()
+        state = SimpleNamespace(messages=messages or [], model=model)
+        state = agent(you, state)
+        messages = state.messages
+        save(messages)
+        if stop.is_set():
             print("\n（已停止）")
-            agent_mod.stop.clear()
+            stop.clear()
 
 
 if __name__ == "__main__":
