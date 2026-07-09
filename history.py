@@ -4,9 +4,10 @@
 """
 
 import json
+import os
 from pathlib import Path
 
-_PATH = Path(__file__).parent / "history.json"
+_PATH = Path(os.environ.get("HISTORY_PATH", Path(__file__).parent / "history.json"))
 
 
 def save(messages, path=_PATH):
@@ -20,3 +21,10 @@ def load(path=_PATH):
         return json.loads(Path(path).read_text("utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         return None
+
+
+def reset_history():
+    """清空持久化文件，返回包含系统提示的初始消息列表。"""
+    save([])
+    from system import build_system
+    return [{"role": "system", "content": build_system()}]

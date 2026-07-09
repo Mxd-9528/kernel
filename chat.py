@@ -2,26 +2,14 @@
 import signal
 from types import SimpleNamespace
 
-from llm import _list_models, _default_model
-
-# 导入业务模块触发事件注册
-import llm
-import compact
-import runtime
-from agent import agent, stop
+from llm import _default_model
+from agent import agent, stop, emit
 from history import save, load
 
 
 def _handle_sigint(signum, frame):
     from agent import stop
     stop.set()
-
-
-_HELP = """内置命令：
-  /new           清空历史，开一段新对话
-  /model <名>    切换模型，不带参数显示当前模型
-  /help          显示此帮助
-  exit           退出"""
 
 
 def chat(model=None):
@@ -46,28 +34,12 @@ def chat(model=None):
         if you == "exit":
             break
 
-        # 斜杠命令：直接改本地 REPL 状态
-        if you == "/new":
-            save([])
-            messages = None
-            print("已开新对话。")
-            continue
-        if you.startswith("/model"):
-            models = _list_models()
-            name = you[len("/model"):].strip()
-            if not name:
-                print(f"当前模型：{model}。可选：{', '.join(models)}")
-            elif name in models:
-                model = name
-                print(f"已切换到 {name}")
-            else:
-                print(f"未知模型 {name}。可选：{', '.join(models)}")
-            continue
-        if you == "/help":
-            print(_HELP)
-            continue
+        # 斜杠命令：交给事件处理器
         if you.startswith("/"):
-            print(f"未知命令：{you}，输入 /help 查看所有可用命令")
+            state = SimpleNamespace(messages=messages or [], model=model)
+            emit("on_command", you, state)
+            model = state.model
+            messages = state.messages
             continue
 
         # 自由文本：进入 agent
@@ -79,9 +51,3 @@ def chat(model=None):
         if stop.is_set():
             print("\n（已停止）")
             stop.clear()
-
-
-if __name__ == "__main__":
-    import sys
-    model = sys.argv[1] if len(sys.argv) > 1 else None
-    chat(model=model)
