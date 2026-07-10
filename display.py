@@ -3,22 +3,40 @@ import time
 from rich.live import Live
 from rich.markdown import Markdown
 
+from agent import on
 
-def render_stream(tokens_iter):
-    """逐 token 用 Rich Live 增量渲染 Markdown，返回完整文本。"""
-    collected = ""
-    live = Live(
-        Markdown(""),
-        refresh_per_second=60,
-        screen=False,
-        vertical_overflow="visible",
-    )
-    live.start()
-    try:
-        for token in tokens_iter:
-            collected += token
-            live.update(Markdown(collected))
-            time.sleep(0.008)
-    finally:
-        live.stop()
-    return collected
+
+# ── 事件驱动渲染：订阅 display_delta / display ──────────────────────
+
+_live = None
+_collected = ""
+
+
+@on("display_delta")
+def _on_display_delta(token):
+    """收到流式 token，逐字符 Live 渲染。"""
+    global _live, _collected
+    if _live is None:
+        _live = Live(
+            Markdown(""),
+            refresh_per_second=60,
+            screen=False,
+            vertical_overflow="visible",
+        )
+        _live.start()
+        _collected = ""
+    for ch in token:
+        _collected += ch
+        _live.update(Markdown(_collected))
+        time.sleep(0.008)
+
+
+@on("display")
+def _on_display(content):
+    """收到完整消息：停止流式 Live，打印内容。"""
+    global _live
+    if _live is not None:
+        _live.stop()
+        _live = None
+    if content:
+        print(content)

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from llm import _default_model
 from agent import agent, stop, emit
-from history import save, load
+from history import load
 
 
 def _handle_sigint(signum, frame):
@@ -47,7 +47,6 @@ def chat(model=None):
         state = SimpleNamespace(messages=messages or [], model=model)
         state = agent(you, state)
         messages = state.messages
-        save(messages)
         if stop.is_set():
             print("\n（已停止）")
             stop.clear()

@@ -122,7 +122,7 @@ def _execute_block(code):
 
 # ── 事件注册：收到 execute 事件 → 执行代码块 → 追2 ──────────────────
 
-from agent import on, stop
+from agent import on, emit, stop
 
 
 @on("execute")
@@ -138,3 +138,4 @@ def _on_execute(state):
 
     results = [_execute_block(b) for b in blocks]
     state.messages.append({"role": "user", "content": feedback(results)})
+    emit("save", state.messages)

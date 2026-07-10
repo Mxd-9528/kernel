@@ -7,6 +7,8 @@ import json
 import os
 from pathlib import Path
 
+from agent import on
+
 _PATH = Path(os.environ.get("HISTORY_PATH", Path(__file__).parent / "history.json"))
 
 
@@ -28,3 +30,9 @@ def reset_history():
     save([])
     from system import build_system
     return [{"role": "system", "content": build_system()}]
+
+
+@on("save")
+def _on_save(messages):
+    """事件驱动存盘。"""
+    save(messages)

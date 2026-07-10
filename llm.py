@@ -95,8 +95,7 @@ def stream_chat(messages, model=None):
 
 # ── 事件注册：收到 send 事件 → 发请求 → 追1 ──────────────────────────
 
-from agent import on, stop
-from display import render_stream
+from agent import on, emit, stop
 
 
 @on("send")
@@ -107,8 +106,15 @@ def _on_send(state):
     model = getattr(state, "model", None)
 
     try:
-        reply = render_stream(stream_chat(state.messages, model))
+        reply = ""
+        for token in stream_chat(state.messages, model):
+            reply += token
+            emit("display_delta", token)
+        emit("display", "")
     except Exception:
+        emit("display", "")  # 停掉流式 Live
         reply = call(state.messages, model)
+        emit("display", reply)
 
     state.messages.append({"role": "assistant", "content": reply})
+    emit("save", state.messages)

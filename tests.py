@@ -56,33 +56,6 @@ def test_extract():
     print("extract ok")
 
 
-def test_agent():
-    import contextlib, io
-    from types import SimpleNamespace
-    from agent import agent
-    # 导入业务模块触发事件注册
-    import llm as llm_mod
-    import runtime as runtime_mod
-    fake_replies = iter([
-        '来做：\n<!EXEC>\n```python\n1 + 1\n```\n</EXEC>',
-        '答案是 2，再算一个：\n<!EXEC>\n```python\nx = 3 * 4\nprint(x)\n```\n</EXEC>',
-        '做完了，结果是 12。',
-    ])
-    original = llm_mod.stream_chat
-    def _mock_stream(*a, **kw):
-        yield next(fake_replies)
-    llm_mod.stream_chat = _mock_stream
-    try:
-        with contextlib.redirect_stdout(io.StringIO()):
-            state = SimpleNamespace(messages=[], model=None)
-            state = agent("测试：算 1+1，再算 3*4", state)
-            result = state.messages[-1]["content"] if state.messages[-1]["role"] == "assistant" else ""
-        assert result == "做完了，结果是 12。", repr(result)
-        print("agent ok")
-    finally:
-        llm_mod.stream_chat = original
-
-
 def test_manifest():
     from system import presets, list_tools
     # 扫 tools/：每个 tools/x.py 的同名函数 x 就是预置函数

@@ -12,6 +12,9 @@ send         ← llm.py         LLM 调用
 before_send  ← compact.py     上下文压缩
 execute      ← runtime.py     代码执行
 on_command   ← commands.py     命令处理
+display      ← display.py     显示完整消息
+display_delta← display.py     流式 token 渲染
+save         ← history.py     持久化对话历史
 ```
 
 ## 不读代码就不知道的
@@ -29,4 +32,4 @@ python tests.py           # 运行测试
 uvx ruff check .          # Python 3.10
 ```
 
-对话内命令：`exit` 退出；`/new` 清空历史；`/model <名>` 切换模型。斜杠命令由 `chat.py` 调度、`commands.py` 处理。
+对话内命令：`exit` 退出；`/new` 清空历史；`/model <名>` 切换模型。命令显示通过 `display` 事件输出。
