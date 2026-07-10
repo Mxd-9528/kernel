@@ -28,7 +28,7 @@ class _TerminalDisplay:
             self._collected = ""
         for ch in token:
             self._collected += ch
-            self._live.update(Markdown(self._collected))
+            self._live.update(Markdown(self._collected.replace("<EXEC>", "").replace("</EXEC>", "")))
             time.sleep(0.008)
 
     def on_display(self, content):
