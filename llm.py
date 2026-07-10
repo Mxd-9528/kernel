@@ -1,6 +1,8 @@
 """LLM 调用工具：读配置、发请求、取回复。"""
 import json
 import os
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 _ENV_LOADED = False
@@ -45,8 +47,6 @@ def stream_chat(messages, model=None):
         "stream": True,
     }).encode("utf-8")
 
-    import urllib.request
-    import urllib.error
     req = urllib.request.Request(
         cfg["url"],
         data=body,

@@ -1,5 +1,6 @@
 import re
 import threading
+import traceback
 from IPython.core.interactiveshell import InteractiveShell
 from IPython.utils.capture import capture_output
 
@@ -80,7 +81,6 @@ def feedback(results):
         if multi:
             parts.append(f"\n--- 代码块 {i + 1} ---")
         if isinstance(r, BaseException):
-            import traceback
             for attr in ("_kernel_stdout", "_kernel_stderr"):
                 text = getattr(r, attr, "")
                 if text and text.strip():

@@ -4,6 +4,8 @@
 失败通过 raise 传递原生异常（FileNotFoundError / IsADirectoryError / UnicodeDecodeError）。
 """
 
+import os
+
 
 def read(file_path, offset=None, limit=None):
     """读文件，返回带行号（文本）或页码（PDF）的字符串。
@@ -19,7 +21,6 @@ def read(file_path, offset=None, limit=None):
 
 
 def _read_text(file_path, offset=None, limit=None):
-    import os
     if os.path.isdir(file_path):
         raise IsADirectoryError(f"路径是目录，read 仅支持文件：{file_path}")
 

@@ -1,5 +1,6 @@
 from agent import on, emit
 from history import reset_history
+from llm import list_models, default_model
 
 _HELP = """内置命令：
   /new           清空历史，开一段新对话
@@ -14,7 +15,6 @@ def handle_command(cmd, state):
         state.messages = reset_history()
         emit("display", "已开新对话。")
     elif cmd.startswith("/model"):
-        from llm import list_models, default_model
         models = list_models()
         name = cmd[len("/model"):].strip()
         if not name:
