@@ -4,18 +4,18 @@
 
 ## 架构骨架
 
-模块通过 `@on`/`emit` 事件系统（`agent.py` 全局注册表）耦合，非直接导入。注册即接入，不修改注册表。
+核心是 `agent.py` 的决策-执行-观察循环。事件系统（`@on`/`emit`）是循环身上的钩子，非架构骨架。注册即接入，不修改注册表。
 
 ```
-事件            处理器          职责
-send         ← llm.py         LLM 调用
-before_send  ← compact.py     上下文压缩
-execute      ← runtime.py     代码执行
-on_command   ← commands.py     命令处理
-display      ← display.py     显示完整消息
-display_delta← display.py     流式 token 渲染
-save         ← history.py     持久化对话历史
+while True:                     # 决策-执行-观察 循环
+    before_send  → compact      # 上下文压缩
+    stream_model → display      # 模型输出 + 流式渲染
+    has_code()?  → 终止         # 纯文本 = 停止
+    execute_code → runtime      # 代码执行
+    save         → history      # 持久化
 ```
+
+斜杠命令通过 `on_command` 事件处理，在 `chat.py` 的外层循环中触发，不经过 agent 循环。
 
 ## 不读代码就不知道的
 

@@ -1,4 +1,4 @@
-from agent import on, emit
+from agent import emit
 from history import reset_history
 from llm import list_models, default_model
 
@@ -9,22 +9,22 @@ _HELP = """内置命令：
   exit           退出"""
 
 
-@on("on_command")
-def handle_command(cmd, state):
+def handle(cmd, messages, model):
     if cmd == "/new":
-        state.messages = reset_history()
+        messages = reset_history()
         emit("display", "已开新对话。")
     elif cmd.startswith("/model"):
         models = list_models()
         name = cmd[len("/model"):].strip()
         if not name:
-            emit("display", f"当前模型：{state.model}。可选：{', '.join(models)}")
+            emit("display", f"当前模型：{model}。可选：{', '.join(models)}")
         elif name in models:
-            state.model = name
-            emit("display", f"已切换到 {name}")
+            model = name
+            emit("display", f"已切换到 {model}")
         else:
             emit("display", f"未知模型 {name}。可选：{', '.join(models)}")
     elif cmd == "/help":
         emit("display", _HELP)
     else:
         emit("display", f"未知命令：{cmd}，输入 /help 查看所有可用命令")
+    return messages, model

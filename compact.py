@@ -70,12 +70,12 @@ def compress(messages, model):
     return "".join(stream_chat(req, model))
 
 
-def maybe_compact(state, model=None):
-    """如果 state.messages 超过阈值，压缩并原地替换 state.messages。"""
-    system, mid, recent = split_history(state.messages)
+def maybe_compact(messages, model=None):
+    """如果 messages 超过阈值，压缩并返回新列表；未达阈值返回原列表。"""
+    system, mid, recent = split_history(messages)
     if not mid or _chars(mid) <= THRESHOLD:
-        return
-    state.messages = system + _compact_mid(mid, model) + recent
+        return messages
+    return system + _compact_mid(mid, model) + recent
 
 
 # ── 事件注册：发消息前自动压缩 ──────────────────────────────────
@@ -83,5 +83,5 @@ def maybe_compact(state, model=None):
 from agent import on
 
 @on("before_send")
-def _before_send(state):
-    maybe_compact(state, getattr(state, "model", None))
+def _before_send(messages, model):
+    messages[:] = maybe_compact(messages, model)

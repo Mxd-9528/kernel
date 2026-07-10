@@ -1,6 +1,5 @@
 '''入口：加载所有模块，启动对话。'''
 import compact  # 注册 @on("before_send")
-import commands # 注册 @on("on_command")
 import display  # 注册 @on("display_delta") @on("display")
 import history  # 注册 @on("save")
 from chat import chat

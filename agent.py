@@ -1,10 +1,8 @@
-"""事件系统 + 纯 agent（循环节奏，零业务填充）。"""
-import threading
-from types import SimpleNamespace
-
+"""决策-执行-观察 循环 + 事件钩子系统。"""
 import llm
 import runtime
 
+# ── 事件钩子 ──────────────────────────────────────────────────
 
 _hooks = {}
 
@@ -21,41 +19,74 @@ def emit(event, *args, **kwargs):
         fn(*args, **kwargs)
 
 
+# ── 模型响应 ──────────────────────────────────────────────────
+
+class Response:
+    """模型响应：封装文本内容，延迟提取代码块。"""
+
+    def __init__(self, content):
+        self.content = content
+
+    def has_code(self):
+        return bool(runtime.extract_blocks(self.content))
+
+    @property
+    def code(self):
+        return runtime.extract_blocks(self.content)
+
+
+def stream_model(messages, model=None):
+    """流式调用 LLM，逐 token 触发 display_delta，返回 Response。"""
+    content = ""
+    try:
+        for token in llm.stream_chat(messages, model):
+            content += token
+            emit("display_delta", token)
+        emit("display_flush")
+    except Exception as e:
+        emit("display_flush")
+        content = f"LLM 请求失败: {e}"
+    return Response(content)
+
+
+def execute_code(code_blocks):
+    """执行代码块，返回环境反馈文本。"""
+    return runtime.feedback(runtime.execute_blocks(code_blocks))
+
+
+# ── 核心循环 ──────────────────────────────────────────────────
+
 _MAX_ITERS = 20
 
 
-def agent(prompt, state=None, max_iters=_MAX_ITERS):
-    """循环：请求 → 追1 → 提取代码块 → 执行 → 追2 → 下一轮。"""
-    if state is None:
-        state = SimpleNamespace(messages=[])
-    if not getattr(state, "stop", None):
-        state.stop = threading.Event()
-    state.messages.append({"role": "user", "content": prompt})
+def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_ITERS):
+    """决策-执行-观察 循环。
+
+    while True:
+        response = model(messages)       # 模型输出
+        if not response.has_code():      # 纯文本 = 终止
+            return messages
+        messages.append(execute_code())  # 本地执行，结果反馈
+    """
+    if messages is None:
+        messages = []
+    messages.append({"role": "user", "content": prompt})
 
     for _ in range(max_iters):
-        if state.stop.is_set():
+        if stop_event and stop_event.is_set():
             break
 
-        emit("before_send", state)   # → compact.py
-        model = getattr(state, "model", None)
-        try:
-            reply = ""
-            for token in llm.stream_chat(state.messages, model):
-                reply += token
-                emit("display_delta", token)
-            emit("display_flush")
-        except Exception as e:
-            emit("display_flush")
-            reply = f"LLM 请求失败: {e}"
-        state.messages.append({"role": "assistant", "content": reply})
-        emit("save", state.messages)
+        emit("before_send", messages, model)          # → compact 压缩
 
-        blocks = runtime.extract_blocks(reply)
-        if not blocks:
-            return state  # 纯文本 = 结束
+        response = stream_model(messages, model)       # → display 流式渲染
+        messages.append({"role": "assistant", "content": response.content})
+        emit("save", messages)                         # → history 存盘
 
-        results = runtime.execute_blocks(blocks)
-        state.messages.append({"role": "user", "content": runtime.feedback(results)})
-        emit("save", state.messages)
+        if not response.has_code():
+            return messages
 
-    return state
+        feedback = execute_code(response.code)
+        messages.append({"role": "user", "content": feedback})
+        emit("save", messages)                         # → history 存盘
+
+    return messages
