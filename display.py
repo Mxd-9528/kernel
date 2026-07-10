@@ -8,35 +8,47 @@ from agent import on
 
 # ── 事件驱动渲染：订阅 display_delta / display ──────────────────────
 
-_live = None
-_collected = ""
+class _TerminalDisplay:
+    """终端渲染实例。封装 Rich Live 状态，供 display_delta / display 事件驱动。"""
+
+    def __init__(self):
+        self._live = None
+        self._collected = ""
+
+    def on_delta(self, token):
+        """收到流式 token，逐字符 Live 渲染。"""
+        if self._live is None:
+            self._live = Live(
+                Markdown(""),
+                refresh_per_second=60,
+                screen=False,
+                vertical_overflow="visible",
+            )
+            self._live.start()
+            self._collected = ""
+        for ch in token:
+            self._collected += ch
+            self._live.update(Markdown(self._collected))
+            time.sleep(0.008)
+
+    def on_display(self, content):
+        """收到完整消息：停止流式 Live，打印内容。"""
+        if self._live is not None:
+            self._live.stop()
+            self._live = None
+        self._collected = ""
+        if content:
+            print(content)
+
+
+_display = _TerminalDisplay()
 
 
 @on("display_delta")
 def _on_display_delta(token):
-    """收到流式 token，逐字符 Live 渲染。"""
-    global _live, _collected
-    if _live is None:
-        _live = Live(
-            Markdown(""),
-            refresh_per_second=60,
-            screen=False,
-            vertical_overflow="visible",
-        )
-        _live.start()
-        _collected = ""
-    for ch in token:
-        _collected += ch
-        _live.update(Markdown(_collected))
-        time.sleep(0.008)
+    _display.on_delta(token)
 
 
 @on("display")
 def _on_display(content):
-    """收到完整消息：停止流式 Live，打印内容。"""
-    global _live
-    if _live is not None:
-        _live.stop()
-        _live = None
-    if content:
-        print(content)
+    _display.on_display(content)
