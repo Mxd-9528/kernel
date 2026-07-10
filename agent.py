@@ -21,9 +21,6 @@ def emit(event, *args, **kwargs):
         fn(*args, **kwargs)
 
 
-# 协作式中断。业务处理器检查此标志，设置后停止下一轮。
-stop = threading.Event()
-
 _MAX_ITERS = 20
 
 
@@ -31,15 +28,25 @@ def agent(prompt, state=None, max_iters=_MAX_ITERS):
     """循环：请求 → 追1 → 提取代码块 → 执行 → 追2 → 下一轮。"""
     if state is None:
         state = SimpleNamespace(messages=[])
+    if not getattr(state, "stop", None):
+        state.stop = threading.Event()
     state.messages.append({"role": "user", "content": prompt})
 
     for _ in range(max_iters):
-        if stop.is_set():
+        if state.stop.is_set():
             break
 
         emit("before_send", state)   # → compact.py
         model = getattr(state, "model", None)
-        reply = llm.chat(state.messages, model)
+        try:
+            reply = ""
+            for token in llm.stream_chat(state.messages, model):
+                reply += token
+                emit("display_delta", token)
+            emit("display", "")
+        except Exception as e:
+            emit("display", "")
+            reply = f"LLM 请求失败: {e}"
         state.messages.append({"role": "assistant", "content": reply})
         emit("save", state.messages)
         emit("after_assistant", state)

@@ -78,17 +78,3 @@ def stream_chat(messages, model=None):
             yield content
 
 
-def chat(messages, model=None):
-    """发流式请求，返回回复文本。失败时返回错误信息文本。"""
-    from agent import emit  # 懒加载，避免循环 import
-
-    try:
-        reply = ""
-        for token in stream_chat(messages, model):
-            reply += token
-            emit("display_delta", token)
-        emit("display", "")
-        return reply
-    except Exception as e:
-        emit("display", "")
-        return f"LLM 请求失败: {e}"

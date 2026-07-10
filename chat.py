@@ -1,15 +1,19 @@
 
 import signal
+import threading
 from types import SimpleNamespace
 
 from llm import _default_model
-from agent import agent, stop, emit
+from agent import agent, emit
 from history import load
+
+# signal handler 通过此 cell 访问当前轮次的 state.stop
+_current_state = None
 
 
 def _handle_sigint(signum, frame):
-    from agent import stop
-    stop.set()
+    if _current_state is not None:
+        _current_state.stop.set()
 
 
 def chat(model=None):
@@ -19,6 +23,7 @@ def chat(model=None):
     按 Ctrl+C 停止：当前轮走完后回到输入，不继续下轮。
     model: None 用默认（models.json 第一个）。
     """
+    global _current_state
     signal.signal(signal.SIGINT, _handle_sigint)
 
     model = model or _default_model()
@@ -43,10 +48,10 @@ def chat(model=None):
             continue
 
         # 自由文本：进入 agent
-        stop.clear()
-        state = SimpleNamespace(messages=messages or [], model=model)
+        state = SimpleNamespace(messages=messages or [], model=model, stop=threading.Event())
+        _current_state = state
         state = agent(you, state)
+        _current_state = None
         messages = state.messages
-        if stop.is_set():
+        if state.stop.is_set():
             print("\n（已停止）")
-            stop.clear()
