@@ -8,8 +8,8 @@ from inject import inject
 
 _MAX_RUN_SECS = 60  # 单代码块硬超时秒数，超过则放弃等待、抛 TimeoutError（防止代码块永久阻塞卡住循环）
 
-# 外层 <!EXEC>...</EXEC> 是真边界（代码里不会出现）；内层 ``` 顺着模型天性。
-_EXEC_PATTERN = r"<!EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
+# 外层 <EXEC>...</EXEC> 是真边界（代码里不会出现）；内层 ``` 顺着模型天性。
+_EXEC_PATTERN = r"<EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 

@@ -37,9 +37,9 @@ def test_run_cell():
 
 def test_extract():
     import re
-    _p = r"<!EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
+    _p = r"<EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
     def _x(t): return [m.strip() for m in re.findall(_p, t, re.DOTALL)]
-    reply = '<!EXEC>\n```python\ns = "他说```你好```"\nprint(s)\nfor i in range(2):\n    print(i)\n```\n</EXEC>'
+    reply = '<EXEC>\n```python\ns = "他说```你好```"\nprint(s)\nfor i in range(2):\n    print(i)\n```\n</EXEC>'
     blocks = _x(reply)
     assert len(blocks) == 1
     code = blocks[0]
@@ -48,7 +48,7 @@ def test_extract():
     assert code.endswith("print(i)")
     assert code.count("\n") == 3
 
-    multi = '<!EXEC>\n```python\n1 + 1\n```\n</EXEC>\n中间文字\n<!EXEC>\n```python\nprint("hello")\n```\n</EXEC>'
+    multi = '<EXEC>\n```python\n1 + 1\n```\n</EXEC>\n中间文字\n<EXEC>\n```python\nprint("hello")\n```\n</EXEC>'
     blocks = _x(multi)
     assert len(blocks) == 2
     assert blocks[0] == "1 + 1"
