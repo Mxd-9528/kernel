@@ -79,18 +79,22 @@ def split_history(history, keep=KEEP_ROUNDS):
     return system, conv[:split], conv[split:]
 
 
+def _compact_mid(mid, model):
+    """压缩中间消息，返回桥接消息对 [user, assistant]."""
+    summary = compress(mid, model)
+    return [
+        {"role": "user", "content": "（以下是已压缩的旧上下文摘要）"},
+        {"role": "assistant", "content": summary},
+    ]
+
+
 def compact(history, keep=KEEP_ROUNDS, threshold=THRESHOLD, model=None):
     """压缩 history：中间部分字符数超 threshold 才压。未达阈值原样返回。
     压缩时摘要中间部分，作 user/assistant 对回插。model 用于调用压缩 LLM。"""
     system, mid, recent = split_history(history, keep)
     if not mid or _chars(mid) <= threshold:
         return history
-    summary = compress(mid, model)
-    bridge = [
-        {"role": "user", "content": "（以下是已压缩的旧上下文摘要）"},
-        {"role": "assistant", "content": summary},
-    ]
-    return system + bridge + recent
+    return system + _compact_mid(mid, model) + recent
 
 
 def compress(messages, model):
@@ -107,12 +111,7 @@ def maybe_compact(state, model=None):
     system, mid, recent = split_history(state.messages)
     if not mid or _chars(mid) <= THRESHOLD:
         return
-    summary = compress(mid, model)
-    bridge = [
-        {"role": "user", "content": "（以下是已压缩的旧上下文摘要）"},
-        {"role": "assistant", "content": summary},
-    ]
-    state.messages = system + bridge + recent
+    state.messages = system + _compact_mid(mid, model) + recent
 
 
 # ── 事件注册：发消息前自动压缩 ──────────────────────────────────

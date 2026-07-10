@@ -32,13 +32,17 @@ class _TerminalDisplay:
             time.sleep(0.008)
 
     def on_display(self, content):
-        """收到完整消息：停止流式 Live，打印内容。"""
+        """收到完整消息：先 flush 流式渲染，再打印内容。"""
+        self._flush()
+        if content:
+            print(content)
+
+    def _flush(self):
+        """停止流式 Live 渲染，清空缓冲区。"""
         if self._live is not None:
             self._live.stop()
             self._live = None
         self._collected = ""
-        if content:
-            print(content)
 
 
 _display = _TerminalDisplay()
@@ -52,3 +56,8 @@ def _on_display_delta(token):
 @on("display")
 def _on_display(content):
     _display.on_display(content)
+
+
+@on("display_flush")
+def _on_display_flush():
+    _display._flush()

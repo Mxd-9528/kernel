@@ -14,8 +14,8 @@ def handle_command(cmd, state):
         state.messages = reset_history()
         emit("display", "已开新对话。")
     elif cmd.startswith("/model"):
-        from llm import _list_models, _default_model
-        models = _list_models()
+        from llm import list_models, default_model
+        models = list_models()
         name = cmd[len("/model"):].strip()
         if not name:
             emit("display", f"当前模型：{state.model}。可选：{', '.join(models)}")

@@ -43,13 +43,12 @@ def agent(prompt, state=None, max_iters=_MAX_ITERS):
             for token in llm.stream_chat(state.messages, model):
                 reply += token
                 emit("display_delta", token)
-            emit("display", "")
+            emit("display_flush")
         except Exception as e:
-            emit("display", "")
+            emit("display_flush")
             reply = f"LLM 请求失败: {e}"
         state.messages.append({"role": "assistant", "content": reply})
         emit("save", state.messages)
-        emit("after_assistant", state)
 
         blocks = runtime.extract_blocks(reply)
         if not blocks:

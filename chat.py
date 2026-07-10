@@ -3,7 +3,7 @@ import signal
 import threading
 from types import SimpleNamespace
 
-from llm import _default_model
+from llm import default_model
 from agent import agent, emit
 from history import load
 
@@ -26,7 +26,7 @@ def chat(model=None):
     global _current_state
     signal.signal(signal.SIGINT, _handle_sigint)
 
-    model = model or _default_model()
+    model = model or default_model()
     messages = load()  # 自动接续上次对话；无历史则 None
     if messages is None:
         from system import build_system

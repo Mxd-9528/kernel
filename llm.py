@@ -23,18 +23,18 @@ def _load_env():
         os.environ.setdefault(k.strip(), v.strip())
 
 
-def _list_models():
+def list_models():
     return json.loads((Path(__file__).parent / "models.json").read_text("utf-8"))
 
 
-def _default_model():
-    return next(iter(_list_models()))
+def default_model():
+    return next(iter(list_models()))
 
 
 def stream_chat(messages, model=None):
     """向 LLM 发流式请求，逐 token yield。"""
     _load_env()
-    cfg = _list_models()[model or _default_model()]
+    cfg = list_models()[model or default_model()]
     key = os.environ.get(cfg["key_env"])
     if not key:
         raise RuntimeError(f"环境变量 {cfg['key_env']} 未设置——请在 .env 或系统环境变量里配置")
