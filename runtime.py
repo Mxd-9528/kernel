@@ -120,22 +120,11 @@ def _execute_block(code):
     return error[0] if error[0] is not None else result[0]
 
 
-# ── 事件注册：收到 execute 事件 → 执行代码块 → 追2 ──────────────────
+def extract_blocks(reply):
+    """从回复中提取代码块，返回去壳后的代码字符串列表。"""
+    return [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
 
-from agent import on, emit, stop
 
-
-@on("execute")
-def _on_execute(state):
-    """提取代码块，执行，追2。"""
-    if stop.is_set():
-        return
-    reply = state.messages[-1]["content"]
-
-    blocks = [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
-    if not blocks:
-        return
-
-    results = [_execute_block(b) for b in blocks]
-    state.messages.append({"role": "user", "content": feedback(results)})
-    emit("save", state.messages)
+def execute_blocks(blocks):
+    """执行代码块列表，返回结果列表。"""
+    return [_execute_block(b) for b in blocks]

@@ -10,7 +10,6 @@ def _names():
     from agent import agent
     from system import build_system as build_system_prompt
     from system import list_tools, list_skills, presets
-    from llm import call
     from chat import chat
     from compact import compact
     from history import save as save_history, load as load_history
@@ -18,7 +17,6 @@ def _names():
     machines = {
         "agent": agent,
         "build_system_prompt": build_system_prompt,
-        "call": call,
         "chat": chat,
         "compact": compact,
         "list_skills": list_skills,

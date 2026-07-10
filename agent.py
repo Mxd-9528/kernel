@@ -1,7 +1,9 @@
 """事件系统 + 纯 agent（循环节奏，零业务填充）。"""
-import re
 import threading
 from types import SimpleNamespace
+
+import llm
+import runtime
 
 
 _hooks = {}
@@ -24,12 +26,9 @@ stop = threading.Event()
 
 _MAX_ITERS = 20
 
-# 代码块检测正则——循环控制的一部分，不是业务。
-_EXEC_PATTERN = r"<!EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
-
 
 def agent(prompt, state=None, max_iters=_MAX_ITERS):
-    """循环：发 → 追1 → 检查 → 追2 → 重复。业务填充通过事件注入。"""
+    """循环：请求 → 追1 → 提取代码块 → 执行 → 追2 → 下一轮。"""
     if state is None:
         state = SimpleNamespace(messages=[])
     state.messages.append({"role": "user", "content": prompt})
@@ -39,14 +38,18 @@ def agent(prompt, state=None, max_iters=_MAX_ITERS):
             break
 
         emit("before_send", state)   # → compact.py
-        emit("send", state)          # → llm.py：发请求 + 追1
+        model = getattr(state, "model", None)
+        reply = llm.chat(state.messages, model)
+        state.messages.append({"role": "assistant", "content": reply})
+        emit("save", state.messages)
         emit("after_assistant", state)
 
-        reply = state.messages[-1]["content"]
-        blocks = [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
+        blocks = runtime.extract_blocks(reply)
         if not blocks:
             return state  # 纯文本 = 结束
 
-        emit("execute", state)       # → runtime.py：执行 + 追2
+        results = runtime.execute_blocks(blocks)
+        state.messages.append({"role": "user", "content": runtime.feedback(results)})
+        emit("save", state.messages)
 
     return state

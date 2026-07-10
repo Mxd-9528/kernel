@@ -31,24 +31,6 @@ def _default_model():
     return next(iter(_list_models()))
 
 
-def call(messages, model=None):
-    """非流式调 LLM，无终端显示。流式失败时做 fallback。"""
-    _load_env()
-    cfg = _list_models()[model or _default_model()]
-    key = os.environ.get(cfg["key_env"])
-    if not key:
-        raise RuntimeError(f"环境变量 {cfg['key_env']} 未设置——请在 .env 或系统环境变量里配置")
-    body = json.dumps({"model": cfg["model"], "messages": messages}).encode("utf-8")
-    import urllib.request
-    req = urllib.request.Request(
-        cfg["url"],
-        data=body,
-        headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
-    )
-    resp = json.loads(urllib.request.urlopen(req).read())
-    return resp["choices"][0]["message"]["content"]
-
-
 def stream_chat(messages, model=None):
     """向 LLM 发流式请求，逐 token yield。"""
     _load_env()
@@ -64,12 +46,17 @@ def stream_chat(messages, model=None):
     }).encode("utf-8")
 
     import urllib.request
+    import urllib.error
     req = urllib.request.Request(
         cfg["url"],
         data=body,
         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
     )
-    resp = urllib.request.urlopen(req)
+    try:
+        resp = urllib.request.urlopen(req)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {e.code}: {body}") from e
 
     for line_bytes in resp:
         line = line_bytes.decode("utf-8").strip()
@@ -86,35 +73,22 @@ def stream_chat(messages, model=None):
         if not choices:
             continue
         delta = choices[0].get("delta", {})
-        if delta.get("reasoning_content"):
-            continue
         content = delta.get("content", "")
         if content:
             yield content
 
 
-# ── 事件注册：收到 send 事件 → 发请求 → 追1 ──────────────────────────
-
-from agent import on, emit, stop
-
-
-@on("send")
-def _on_send(state):
-    """发请求，取回复，追加到 state.messages。"""
-    if stop.is_set():
-        return
-    model = getattr(state, "model", None)
+def chat(messages, model=None):
+    """发流式请求，返回回复文本。失败时返回错误信息文本。"""
+    from agent import emit  # 懒加载，避免循环 import
 
     try:
         reply = ""
-        for token in stream_chat(state.messages, model):
+        for token in stream_chat(messages, model):
             reply += token
             emit("display_delta", token)
         emit("display", "")
-    except Exception:
-        emit("display", "")  # 停掉流式 Live
-        reply = call(state.messages, model)
-        emit("display", reply)
-
-    state.messages.append({"role": "assistant", "content": reply})
-    emit("save", state.messages)
+        return reply
+    except Exception as e:
+        emit("display", "")
+        return f"LLM 请求失败: {e}"
