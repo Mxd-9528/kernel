@@ -52,12 +52,12 @@ def _compact_mid(mid, model):
     ]
 
 
-def compact(history, keep=KEEP_ROUNDS, threshold=THRESHOLD, model=None):
-    """压缩 history：中间部分字符数超 threshold 才压。未达阈值原样返回。
+def compact(messages, *, keep=KEEP_ROUNDS, threshold=THRESHOLD, model=None):
+    """压缩 messages：中间部分字符数超 threshold 才压。未达阈值原样返回。
     压缩时摘要中间部分，作 user/assistant 对回插。model 用于调用压缩 LLM。"""
-    system, mid, recent = split_history(history, keep)
+    system, mid, recent = split_history(messages, keep)
     if not mid or _chars(mid) <= threshold:
-        return history
+        return messages
     return system + _compact_mid(mid, model) + recent
 
 
@@ -70,18 +70,10 @@ def compress(messages, model):
     return "".join(stream_chat(req, model))
 
 
-def maybe_compact(messages, model=None):
-    """如果 messages 超过阈值，压缩并返回新列表；未达阈值返回原列表。"""
-    system, mid, recent = split_history(messages)
-    if not mid or _chars(mid) <= THRESHOLD:
-        return messages
-    return system + _compact_mid(mid, model) + recent
-
-
 # ── 事件注册：发消息前自动压缩 ──────────────────────────────────
 
 from agent import on
 
 @on("before_send")
 def _before_send(messages, model):
-    messages[:] = maybe_compact(messages, model)
+    messages[:] = compact(messages, model=model)
