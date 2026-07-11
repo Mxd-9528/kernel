@@ -16,20 +16,34 @@ class _TerminalDisplay:
         self._collected = ""
 
     def on_delta(self, token):
-        """收到流式 token，逐字符 Live 渲染。"""
-        if self._live is None:
-            self._live = Live(
-                Markdown(""),
-                refresh_per_second=60,
-                screen=False,
-                vertical_overflow="visible",
-            )
-            self._live.start()
-            self._collected = ""
+        """收到流式 token，累加后逐字符渲染。"""
+        self._collected += token.replace("<EXEC>", "").replace("</EXEC>", "")
+        self._start()
         for ch in token:
-            self._collected += ch
-            self._live.update(Markdown(self._collected.replace("<EXEC>", "").replace("</EXEC>", "")))
+            self._render(self._collected)
             time.sleep(0.008)
+
+    def _start(self):
+        """启动渲染后端。"""
+        if self._live is not None:
+            return
+        self._live = Live(
+            Markdown(""),
+            refresh_per_second=60,
+            screen=False,
+            vertical_overflow="visible",
+        )
+        self._live.start()
+
+    def _render(self, text):
+        """渲染文本到终端。"""
+        self._live.update(Markdown(text))
+
+    def _stop(self):
+        """停止渲染后端。"""
+        if self._live is not None:
+            self._live.stop()
+            self._live = None
 
     def on_display(self, content):
         """收到完整消息：先 flush 流式渲染，再打印内容。"""
@@ -38,10 +52,8 @@ class _TerminalDisplay:
             print(content)
 
     def _flush(self):
-        """停止流式 Live 渲染，清空缓冲区。"""
-        if self._live is not None:
-            self._live.stop()
-            self._live = None
+        """停止渲染，清空缓冲区。"""
+        self._stop()
         self._collected = ""
 
 

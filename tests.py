@@ -144,6 +144,31 @@ def test_feedback():
     print("feedback ok")
 
 
+def test_display():
+    """display 状态管理：累加、清洗 EXEC 标签、flush 重置。
+    渲染后端（Live/Textual）可替换，此处只测状态逻辑。"""
+    import display
+    d = display._TerminalDisplay()
+    # 替换渲染后端为空操作，隔离终端
+    d._render = lambda text: None
+    d._stop = lambda: None
+
+    # 累加 + 清洗 <EXEC> 标签
+    d.on_delta("hello <EXEC>")
+    d.on_delta("code</EXEC> world")
+    assert d._collected == "hello code world", f"累加或清洗异常: {d._collected}"
+
+    # flush 重置
+    d._flush()
+    assert d._collected == ""
+
+    # on_display 先 flush 再输出
+    d.on_delta("pending")
+    d.on_display("done")
+    assert d._collected == ""
+    print("display ok")
+
+
 def test_history():
     import tempfile
     import os
