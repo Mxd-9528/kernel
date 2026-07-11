@@ -60,14 +60,7 @@ _MAX_ITERS = 20
 
 
 def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_ITERS):
-    """决策-执行-观察 循环。
-
-    while True:
-        response = model(messages)       # 模型输出
-        if not response.has_code():      # 纯文本 = 终止
-            return messages
-        messages.append(execute_code())  # 本地执行，结果反馈
-    """
+    """决策-执行-观察 循环。"""
     if messages is None:
         messages = []
     messages.append({"role": "user", "content": prompt})
