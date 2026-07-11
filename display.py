@@ -17,7 +17,7 @@ class _TerminalDisplay:
 
     def on_delta(self, token):
         """收到流式 token，累加后逐字符渲染。"""
-        self._collected += token.replace("<EXEC>", "").replace("</EXEC>", "")
+        self._collected += token
         self._start()
         for ch in token:
             self._render(self._collected)
@@ -36,8 +36,9 @@ class _TerminalDisplay:
         self._live.start()
 
     def _render(self, text):
-        """渲染文本到终端。"""
-        self._live.update(Markdown(text))
+        """渲染文本到终端。清洗 <EXEC> 标签避免 Rich Markdown 误解析为 HTML。"""
+        clean = text.replace("<EXEC>", "").replace("</EXEC>", "")
+        self._live.update(Markdown(clean))
 
     def _stop(self):
         """停止渲染后端。"""

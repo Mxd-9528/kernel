@@ -153,10 +153,10 @@ def test_display():
     d._render = lambda text: None
     d._stop = lambda: None
 
-    # 累加 + 清洗 <EXEC> 标签
-    d.on_delta("hello <EXEC>")
-    d.on_delta("code</EXEC> world")
-    assert d._collected == "hello code world", f"累加或清洗异常: {d._collected}"
+    # 累加保留原文，渲染时清洗（防止 token 边界切碎标签导致清洗失效）
+    d.on_delta("hello <EX")
+    d.on_delta("EC>code</EXEC> world")
+    assert d._collected == "hello <EXEC>code</EXEC> world", f"累加异常: {d._collected}"
 
     # flush 重置
     d._flush()
