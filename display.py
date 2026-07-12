@@ -7,10 +7,11 @@ import time
 
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.theme import Theme
 
 from agent import on
 
-_console = Console()
+console = Console(theme=Theme({"markdown.code": "medium_purple"}))
 _FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 # 复用 runtime.py 的执行代码块正则，保证折叠与执行匹配同一组块
@@ -94,7 +95,7 @@ class _Spinner:
         if self._buf:
             folded = _fold_exec_blocks(self._buf)
             clean = folded.replace("<EXEC>", "").replace("</EXEC>", "")
-            _console.print(Markdown(clean))
+            console.print(Markdown(clean))
         self._buf = ""
         self._tokens = 0
         self._label = "思考中"
@@ -122,4 +123,4 @@ def _on_flush():
 @on("display")
 def _on_display(content):
     if content:
-        _console.print(content)
+        console.print(content)

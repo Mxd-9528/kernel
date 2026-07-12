@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: 'Segoe UI', 'PingFang SC', system-ui, sans-serif; background: #1e1e1e; color: #d4d4d4; padding: 32px; max-width: 720px; margin: 0 auto; }
+  h1 { color: #e0e0e0; font-size: 1.4em; margin-bottom: 4px; }
+  .sub { color: #888; font-size: 0.85em; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #444; color: #aaa; font-weight: 600; font-size: 0.85em; }
+  td { padding: 8px 12px; border-bottom: 1px solid #333; }
+  .code { font-family: 'Cascadia Code', 'Fira Code', monospace; }
+  .note { color: #888; font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<h1>Rich 样式表 &nbsp;·&nbsp; 浏览器预览</h1>
+<p class="sub">所有样式在#1e1e1e深色底上的实际效果。当前使用：行内代码 <span style="color:#9370db">medium_purple</span>，用户输入 <span style="background:#4d4d4d">grey30底纹</span></p>
+
+<table>
+  <tr><th>样式名</th><th>效果</th><th>CSS 颜色</th></tr>
+  <tr><td class="code">bold</td><td><b>粗体</b></td><td class="note">—</td></tr>
+  <tr><td class="code">dim</td><td><span style="color:#888">暗色</span></td><td class="note">#888</td></tr>
+  <tr><td class="code">italic</td><td><i>斜体</i></td><td class="note">—</td></tr>
+  <tr><td class="code">underline</td><td><u>下划线</u></td><td class="note">—</td></tr>
+  <tr><td class="code">strike</td><td><s>删除线</s></td><td class="note">—</td></tr>
+</table>
+
+<table>
+  <tr><th>颜色名</th><th>预览</th><th>十六进制</th><th>备注</th></tr>
+  <tr><td class="code">red</td><td><span style="color:#ff5555">● 红色文字示例</span></td><td class="code">#ff5555</td><td class="note">标准红</td></tr>
+  <tr><td class="code">green</td><td><span style="color:#50fa7b">● 绿色文字示例</span></td><td class="code">#50fa7b</td><td class="note">标准绿</td></tr>
+  <tr><td class="code">yellow</td><td><span style="color:#f1fa8c">● 黄色文字示例</span></td><td class="code">#f1fa8c</td><td class="note">标准黄</td></tr>
+  <tr><td class="code">blue</td><td><span style="color:#6272a4">● 蓝色文字示例</span></td><td class="code">#6272a4</td><td class="note">标准蓝</td></tr>
+  <tr><td class="code">magenta</td><td><span style="color:#ff79c6">● 品红文字示例</span></td><td class="code">#ff79c6</td><td class="note">标准品红</td></tr>
+  <tr><td class="code">cyan</td><td><span style="color:#8be9fd">● 青色文字示例</span></td><td class="code">#8be9fd</td><td class="note">标准青</td></tr>
+  <tr><td class="code">white</td><td><span style="color:#f8f8f2">● 白色文字示例</span></td><td class="code">#f8f8f2</td><td class="note">纯白</td></tr>
+</table>
+
+<table>
+  <tr><th>紫色系</th><th>预览</th><th>十六进制</th><th>备注</th></tr>
+  <tr><td class="code">medium_purple</td><td><span style="color:#9370db">● `行内代码` 效果</span></td><td class="code">#9370db</td><td class="note">柔和紫 ← 当前使用</td></tr>
+  <tr><td class="code">plum</td><td><span style="color:#dda0dd">● `行内代码` 效果</span></td><td class="code">#dda0dd</td><td class="note">温润淡紫</td></tr>
+  <tr><td class="code">violet</td><td><span style="color:#ee82ee">● `行内代码` 效果</span></td><td class="code">#ee82ee</td><td class="note">紫罗兰</td></tr>
+  <tr><td class="code">dark_violet</td><td><span style="color:#9400d3">● `行内代码` 效果</span></td><td class="code">#9400d3</td><td class="note">深紫罗兰</td></tr>
+  <tr><td class="code">orchid</td><td><span style="color:#da70d6">● `行内代码` 效果</span></td><td class="code">#da70d6</td><td class="note">兰花紫</td></tr>
+  <tr><td class="code">medium_orchid</td><td><span style="color:#ba55d3">● `行内代码` 效果</span></td><td class="code">#ba55d3</td><td class="note">中等兰花紫</td></tr>
+  <tr><td class="code">thistle</td><td><span style="color:#d8bfd8">● `行内代码` 效果</span></td><td class="code">#d8bfd8</td><td class="note">极淡灰紫</td></tr>
+  <tr><td class="code">purple</td><td><span style="color:#800080">● `行内代码` 效果</span></td><td class="code">#800080</td><td class="note">标准紫</td></tr>
+</table>
+
+<table>
+  <tr><th>底纹 (background)</th><th>预览</th><th>十六进制</th><th>备注</th></tr>
+  <tr><td class="code">on grey15</td><td><span style="background:#262626;padding:2px 6px">深灰底纹</span></td><td class="code">#262626</td><td class="note">很暗</td></tr>
+  <tr><td class="code">on grey30</td><td><span style="background:#4d4d4d;padding:2px 6px">灰底纹</span></td><td class="code">#4d4d4d</td><td class="note">适中 ← 当前使用</td></tr>
+  <tr><td class="code">on grey50</td><td><span style="background:#808080;padding:2px 6px">浅灰底纹</span></td><td class="code">#808080</td><td class="note">中等偏亮</td></tr>
+  <tr><td class="code">on grey70</td><td><span style="background:#b3b3b3;padding:2px 6px;color:#1e1e1e">亮灰底纹</span></td><td class="code">#b3b3b3</td><td class="note">较亮</td></tr>
+  <tr><td class="code">on purple</td><td><span style="background:#800080;padding:2px 6px">紫底</span></td><td class="code">#800080</td><td class="note">标准紫底</td></tr>
+  <tr><td class="code">on medium_purple</td><td><span style="background:#9370db;padding:2px 6px">柔和紫底</span></td><td class="code">#9370db</td><td class="note">—</td></tr>
+</table>
+
+<table>
+  <tr><th>组合示例</th><th>预览</th></tr>
+  <tr><td class="code">bold medium_purple</td><td><b style="color:#9370db">粗体紫</b></td></tr>
+  <tr><td class="code">italic cyan</td><td><i style="color:#8be9fd">斜体青</i></td></tr>
+  <tr><td class="code">bold yellow on grey30</td><td><b style="color:#f1fa8c;background:#4d4d4d;padding:2px 6px">黄字灰底</b></td></tr>
+</table>
+
+<p class="note" style="margin-top:28px">直接用浏览器打开此文件即可预览。Rich 完整颜色列表见 <a href="https://rich.readthedocs.io/en/stable/appendix/colors.html" style="color:#9370db">Rich Colors</a></p>
+
+</body>
+</html>

@@ -3,6 +3,8 @@ import signal
 import threading
 
 import commands
+import sys
+from display import console
 from llm import default_model
 from agent import agent
 from history import load
@@ -34,6 +36,9 @@ def chat(model=None):
     while True:
         try:
             you = input("> ")
+            sys.stdout.write("\x1b[1A\x1b[K")
+            sys.stdout.flush()
+            console.print(f"> {you}", style="on grey30")
         except (EOFError, KeyboardInterrupt):
             break
         if you == "exit":
