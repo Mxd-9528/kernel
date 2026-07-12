@@ -11,7 +11,7 @@ from rich.theme import Theme
 
 from agent import on
 
-console = Console(theme=Theme({"markdown.code": "medium_purple"}))
+console = Console(theme=Theme({"markdown.code": "medium_purple", "markdown.h1": "white", "markdown.h2": "white", "markdown.h3": "white", "markdown.table_header": "white"}))
 _FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 # 复用 runtime.py 的执行代码块正则，保证折叠与执行匹配同一组块
