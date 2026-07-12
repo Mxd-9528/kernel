@@ -73,8 +73,11 @@ def stream_chat(messages, model=None):
         if not choices:
             continue
         delta = choices[0].get("delta", {})
+        reasoning = delta.get("reasoning_content")
+        if reasoning:
+            yield "thinking", reasoning
         content = delta.get("content", "")
         if content:
-            yield content
+            yield "content", content
 
 

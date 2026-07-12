@@ -11,7 +11,7 @@ _MAX_RUN_SECS = 60  # 单代码块硬超时秒数，超过则放弃等待、抛 
 # 外层 <EXEC>...</EXEC> 是真边界（代码里不会出现）；内层 ``` 顺着模型天性。
 _EXEC_PATTERN = r"<EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>"
 
-_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_ANSI = re.compile(r"\x1b\[[0-9;]*[mK]")
 
 # feedback 层的字符截断：防止大 read / bash 输出爆上下文
 # 40/20/40 三段策略：头 40% + 中 20% + 尾 40%——中间 20% 刻意保留，

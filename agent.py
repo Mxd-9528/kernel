@@ -36,12 +36,15 @@ class Response:
 
 
 def stream_model(messages, model=None):
-    """流式调用 LLM，逐 token 触发 display_delta，返回 Response。"""
+    """流式调用 LLM，逐 token 触发 thinking_delta / display_delta，返回 Response。"""
     content = ""
     try:
-        for token in llm.stream_chat(messages, model):
-            content += token
-            emit("display_delta", token)
+        for kind, token in llm.stream_chat(messages, model):
+            if kind == "thinking":
+                emit("thinking_delta", token)
+            else:
+                content += token
+                emit("display_delta", token)
         emit("display_flush")
     except Exception as e:
         emit("display_flush")

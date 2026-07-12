@@ -67,7 +67,7 @@ def compress(messages, model):
         {"role": "system", "content": _COMPRESS_PROMPT},
         {"role": "user", "content": json.dumps(messages, ensure_ascii=False)},
     ]
-    return "".join(stream_chat(req, model))
+    return "".join(token for kind, token in stream_chat(req, model) if kind == "content")
 
 
 # ── 事件注册：发消息前自动压缩 ──────────────────────────────────

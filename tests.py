@@ -145,27 +145,47 @@ def test_feedback():
 
 
 def test_display():
-    """display 状态管理：累加、清洗 EXEC 标签、flush 重置。
-    渲染后端（Live/Textual）可替换，此处只测状态逻辑。"""
+    """_Spinner 状态机：累加、清洗 EXEC、flush 渲染、幂等、空 flush 不渲染。
+    后台 spinner 线程被跳过——测试只关心状态与渲染合同。"""
     import display
-    d = display._TerminalDisplay()
-    # 替换渲染后端为空操作，隔离终端
-    d._render = lambda text: None
-    d._stop = lambda: None
+    import threading
+    from rich.markdown import Markdown
+    s = display._Spinner()
+    rendered = []
+    orig_print = display._console.print
+    display._console.print = lambda *a, **kw: rendered.append(a[0])
+    try:
+        # 占位线程（已结束，可 join）；on_delta 中 _thread is None 判断跳过起新线程
+        t = threading.Thread(target=lambda: None)
+        t.start(); t.join()
+        s._thread = t
 
-    # 累加保留原文，渲染时清洗（防止 token 边界切碎标签导致清洗失效）
-    d.on_delta("hello <EX")
-    d.on_delta("EC>code</EXEC> world")
-    assert d._collected == "hello <EXEC>code</EXEC> world", f"累加异常: {d._collected}"
+        # thinking → content 阶段切换：thinking 计数、content 首个 token 归零重计
+        s.on_thinking("t1")
+        s.on_thinking("t2")
+        assert s._label == "思考中" and s._tokens == 2
+        s.on_delta("hello <EX")
+        assert s._label == "回复中" and s._tokens == 1  # 切阶段清零，加当前 token
+        s.on_delta("EC>code</EXEC> world")
+        assert s._buf == "hello <EXEC>code</EXEC> world", f"累加异常: {s._buf}"
+        assert s._tokens == 2
 
-    # flush 重置
-    d._flush()
-    assert d._collected == ""
+        # flush 触发一次渲染：Markdown 对象、内容已清洗
+        s.flush()
+        assert len(rendered) == 1, f"应渲染一次: {len(rendered)}"
+        assert isinstance(rendered[0], Markdown)
+        assert "<EXEC>" not in rendered[0].markup and "code" in rendered[0].markup
 
-    # on_display 先 flush 再输出
-    d.on_delta("pending")
-    d.on_display("done")
-    assert d._collected == ""
+        # 幂等：再 flush 不再渲染
+        s.flush()
+        assert len(rendered) == 1, "flush 非幂等"
+
+        # 空 buf flush 不触发渲染
+        rendered.clear()
+        s.flush()
+        assert rendered == []
+    finally:
+        display._console.print = orig_print
     print("display ok")
 
 
@@ -245,7 +265,7 @@ def test_compact():
     assert compact(big, keep=6, threshold=1_000_000) == big
 
     # 过阈值：mock 压缩 API，验证重组结构
-    compact_mod.stream_chat = lambda *a, **kw: iter(["【摘要】"])
+    compact_mod.stream_chat = lambda *a, **kw: iter([("content", "【摘要】")])
     new = compact(conv(10), keep=6, threshold=1)
     assert new[0] == {"role": "system", "content": "sys"}  # system 保留
     assert any(m["role"] == "assistant" and "【摘要】" in m["content"] for m in new)

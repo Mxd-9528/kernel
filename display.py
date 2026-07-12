@@ -1,76 +1,125 @@
+"""流式静默计数 + 完结一次性 Rich 渲染。不做增量 markdown——那条路是 bug 池。"""
+import itertools
+import re
+import sys
+import threading
 import time
 
-from rich.live import Live
+from rich.console import Console
 from rich.markdown import Markdown
 
 from agent import on
 
+_console = Console()
+_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
-# ── 事件驱动渲染：订阅 display_delta / display ──────────────────────
+# 复用 runtime.py 的执行代码块正则，保证折叠与执行匹配同一组块
+_EXEC_RE = re.compile(r"<EXEC>\s*```\s*\w*\n?(.*?)```\s*</EXEC>", re.DOTALL)
 
-class _TerminalDisplay:
-    """终端渲染实例。封装 Rich Live 状态，供 display_delta / display 事件驱动。"""
+def _fold_exec_blocks(text):
+    """把 <EXEC>...</EXEC> 代码块替换为折叠摘要代码块。"""
+    def _replacer(m):
+        code = m.group(1).strip()
+        lines = code.splitlines()
+        n = len(lines)
+        preview = "(空)"
+        for line in lines:
+            s = line.strip()
+            if s and not s.startswith("#"):
+                preview = s
+                break
+        if preview == "(空)" and n > 0:
+            preview = lines[0].strip()
+        if len(preview) > 55:
+            preview = preview[:55] + "..."
+        preview = preview.replace("`", "'")
+        if n == 1:
+            return "```\n%s\n```" % preview
+        return "```\n代码块 · %d 行 · %s\n```" % (n, preview)
+    return _EXEC_RE.sub(_replacer, text)
+
+
+class _Spinner:
+    """流式期间刷 spinner 行；flush 时 Rich 一次性渲染累加正文。
+    两阶段计数：thinking → content，label 与 tokens 各自独立。"""
 
     def __init__(self):
-        self._live = None
-        self._collected = ""
+        self._buf = ""                       # 正文累积（仅 content）
+        self._tokens = 0                     # 当前阶段 token 数
+        self._label = "思考中"
+        self._start = None                   # 当前阶段起始时刻
+        self._thread = None
+        self._stop = threading.Event()
+
+    def _ensure_running(self):
+        if self._thread is None:
+            self._start = time.monotonic()
+            self._stop.clear()
+            self._thread = threading.Thread(target=self._loop, daemon=True)
+            self._thread.start()
+
+    def on_thinking(self, token):
+        self._tokens += 1
+        self._ensure_running()
 
     def on_delta(self, token):
-        """收到流式 token，累加后逐字符渲染。"""
-        self._collected += token
-        self._start()
-        for ch in token:
-            self._render(self._collected)
-            time.sleep(0.008)
+        # 首个 content token：切阶段——归零计数、重置计时
+        if self._label != "回复中":
+            self._label = "回复中"
+            self._tokens = 0
+            self._start = time.monotonic()
+        self._buf += token
+        self._tokens += 1
+        self._ensure_running()
 
-    def _start(self):
-        """启动渲染后端。"""
-        if self._live is not None:
-            return
-        self._live = Live(
-            Markdown(""),
-            refresh_per_second=60,
-            screen=False,
-            vertical_overflow="visible",
-        )
-        self._live.start()
+    def _loop(self):
+        for frame in itertools.cycle(_FRAMES):
+            if self._stop.is_set():
+                return
+            elapsed = int(time.monotonic() - self._start)
+            sys.stdout.write(
+                f"\r\x1b[2m{frame} {self._label} · {self._tokens} tokens · {elapsed}s\x1b[0m\x1b[K"
+            )
+            sys.stdout.flush()
+            self._stop.wait(0.1)
 
-    def _render(self, text):
-        """渲染文本到终端。清洗 <EXEC> 标签避免 Rich Markdown 误解析为 HTML。"""
-        clean = text.replace("<EXEC>", "").replace("</EXEC>", "")
-        self._live.update(Markdown(clean))
-
-    def _stop(self):
-        """停止渲染后端。"""
-        if self._live is not None:
-            self._live.stop()
-            self._live = None
-
-    def on_display(self, content):
-        """收到完整消息：先 flush 流式渲染，再打印内容。"""
-        self._flush()
-        if content:
-            print(content)
-
-    def _flush(self):
-        """停止渲染，清空缓冲区。"""
-        self._stop()
-        self._collected = ""
+    def flush(self):
+        """停 spinner、清行、Rich 渲染正文。幂等。"""
+        if self._thread is not None:
+            self._stop.set()
+            self._thread.join()
+            self._thread = None
+            sys.stdout.write("\r\x1b[K")
+            sys.stdout.flush()
+        if self._buf:
+            folded = _fold_exec_blocks(self._buf)
+            clean = folded.replace("<EXEC>", "").replace("</EXEC>", "")
+            _console.print(Markdown(clean))
+        self._buf = ""
+        self._tokens = 0
+        self._label = "思考中"
+        self._start = None
 
 
-_display = _TerminalDisplay()
+_spinner = _Spinner()
+
+
+@on("thinking_delta")
+def _on_thinking(token):
+    _spinner.on_thinking(token)
 
 
 @on("display_delta")
-def _on_display_delta(token):
-    _display.on_delta(token)
+def _on_delta(token):
+    _spinner.on_delta(token)
+
+
+@on("display_flush")
+def _on_flush():
+    _spinner.flush()
 
 
 @on("display")
 def _on_display(content):
-    _display.on_display(content)
-
-
-@on("display_flush")
-def _on_display_flush():
-    _display._flush()
+    if content:
+        _console.print(content)
