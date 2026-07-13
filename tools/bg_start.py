@@ -24,7 +24,7 @@ class _BgThread(threading.Thread):
 def bg_start(fn, *args, **kwargs):
     """把 fn(*args, **kwargs) 扔到后台 daemon 线程执行，立即返回 _BgThread 对象。
 
-    t.join() 会等待线程结束并返回 fn 的返回值。
+    后台运行，完成后不会主动通知——需主动调用 t.join() 等待线程结束并返回 fn 的返回值。
     """
     t = _BgThread(fn, args, kwargs)
     t.start()

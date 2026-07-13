@@ -60,7 +60,7 @@ class _SubAgentThread(threading.Thread):
 
 
 def agent(task, *, model=None):
-    """起后台子代理执行 task，立即返回 Thread。调用 t.join() 获取最终纯文本报告。
+    """起后台子代理执行 task，立即返回 Thread。后台运行，完成后不会主动通知——需主动调用 t.join() 获取最终纯文本报告。
 
     探索性任务（研究、调研、多步推理）交给子代理，避免污染父代理上下文。
     """
