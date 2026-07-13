@@ -7,7 +7,6 @@ import json
 import os
 from pathlib import Path
 
-from agent import EVENT_SAVE
 
 _PATH = Path(os.environ.get("HISTORY_PATH", Path(__file__).parent / "history.json"))
 

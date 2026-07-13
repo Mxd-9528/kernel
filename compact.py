@@ -70,9 +70,7 @@ def compress(messages, model):
     return "".join(token for kind, token in stream_chat(req, model) if kind == "content")
 
 
-# ── 事件注册：发消息前自动压缩 ──────────────────────────────────
-
-from agent import EVENT_BEFORE_SEND
+# ── 供 main.py 注册为事件处理器 ──────────────────────────────
 
 def before_send(messages, model):
     messages[:] = compact(messages, model=model)

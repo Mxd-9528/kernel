@@ -9,8 +9,6 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.theme import Theme
 
-from agent import EVENT_THINKING, EVENT_DISPLAY, EVENT_FLUSH, EVENT_DISPLAY_MSG
-
 console = Console(theme=Theme({"markdown.code": "medium_purple", "markdown.h1": "white", "markdown.h2": "white", "markdown.h3": "white", "markdown.table_header": "white"}))
 _FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
