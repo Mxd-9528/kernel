@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.theme import Theme
 
-from agent import on
+from agent import EVENT_THINKING, EVENT_DISPLAY, EVENT_FLUSH, EVENT_DISPLAY_MSG
 
 console = Console(theme=Theme({"markdown.code": "medium_purple", "markdown.h1": "white", "markdown.h2": "white", "markdown.h3": "white", "markdown.table_header": "white"}))
 _FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -105,22 +105,18 @@ class _Spinner:
 _spinner = _Spinner()
 
 
-@on("thinking_delta")
-def _on_thinking(token):
+def on_thinking(token):
     _spinner.on_thinking(token)
 
 
-@on("display_delta")
-def _on_delta(token):
+def on_delta(token):
     _spinner.on_delta(token)
 
 
-@on("display_flush")
-def _on_flush():
+def on_flush():
     _spinner.flush()
 
 
-@on("display")
-def _on_display(content):
+def on_display(content):
     if content:
         console.print(content)

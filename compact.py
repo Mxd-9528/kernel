@@ -72,8 +72,7 @@ def compress(messages, model):
 
 # ── 事件注册：发消息前自动压缩 ──────────────────────────────────
 
-from agent import on
+from agent import EVENT_BEFORE_SEND
 
-@on("before_send")
-def _before_send(messages, model):
+def before_send(messages, model):
     messages[:] = compact(messages, model=model)

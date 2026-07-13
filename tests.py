@@ -152,8 +152,8 @@ def test_display():
     from rich.markdown import Markdown
     s = display._Spinner()
     rendered = []
-    orig_print = display._console.print
-    display._console.print = lambda *a, **kw: rendered.append(a[0])
+    orig_print = display.console.print
+    display.console.print = lambda *a, **kw: rendered.append(a[0])
     try:
         # 占位线程（已结束，可 join）；on_delta 中 _thread is None 判断跳过起新线程
         t = threading.Thread(target=lambda: None)
@@ -185,7 +185,7 @@ def test_display():
         s.flush()
         assert rendered == []
     finally:
-        display._console.print = orig_print
+        display.console.print = orig_print
     print("display ok")
 
 
@@ -272,6 +272,44 @@ def test_compact():
     assert new[-1] == {"role": "assistant", "content": "a9"}  # 最近6轮原样在末尾
     assert len(new) < len(conv(10))
     print("compact ok")
+
+
+def test_event_system():
+    """事件系统：常量注册、emit 触发、多处理器、无处理器不崩、多次 emit 不遗漏。"""
+    from agent import on, emit
+    from agent import (EVENT_THINKING, EVENT_DISPLAY, EVENT_FLUSH,
+                       EVENT_BEFORE_SEND, EVENT_SAVE, EVENT_DISPLAY_MSG)
+
+    calls = []
+
+    # 用常量注册处理器
+    @on(EVENT_THINKING)
+    def _h1(token):
+        calls.append(("thinking", token))
+
+    @on(EVENT_DISPLAY)
+    def _h2(token):
+        calls.append(("display", token))
+
+    # emit 触发
+    emit(EVENT_THINKING, "t1")
+    emit(EVENT_DISPLAY, "d1")
+    assert calls == [("thinking", "t1"), ("display", "d1")], calls
+
+    # 多次 emit 同一事件，处理器每次都调用
+    emit(EVENT_THINKING, "t2")
+    assert calls == [("thinking", "t1"), ("display", "d1"), ("thinking", "t2")]
+
+    # 无处理器的事件 emit 不崩
+    emit(EVENT_FLUSH)  # 没有注册处理器，应静默通过
+
+    # 常量定义完整性：5 个事件常量都已定义
+    for name in ("EVENT_THINKING", "EVENT_DISPLAY", "EVENT_FLUSH",
+                 "EVENT_BEFORE_SEND", "EVENT_SAVE", "EVENT_DISPLAY_MSG"):
+        from agent import __dict__ as agent_ns
+        assert name in agent_ns, f"缺少事件常量: {name}"
+
+    print("event_system ok")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,8 @@
+refactor: 事件系统从魔法字符串+import副作用改为常量+显式注册
+
+- agent.py: 新增6个事件常量，emit调用改用常量
+- display.py/history.py/compact.py: 删除@on装饰器，改为公开函数
+- commands.py: emit调用改用常量
+- main.py: import副作用改为显式on(EVENT_X)(handler)注册
+- tests.py: 新增test_event_system，修复_console→console
+- CONTEXT.md/CLAUDE.md: 同步更新文档

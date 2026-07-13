@@ -6,6 +6,15 @@ import runtime
 
 _hooks = {}
 
+# ── 事件常量：emit / on 共用，避免裸字符串拼写错误 ──────────────────
+
+EVENT_THINKING = "thinking_delta"
+EVENT_DISPLAY = "display_delta"
+EVENT_FLUSH = "display_flush"
+EVENT_BEFORE_SEND = "before_send"
+EVENT_SAVE = "save"
+EVENT_DISPLAY_MSG = "display"
+
 def on(event):
     """注册事件处理器。"""
     def decorator(fn):
@@ -41,13 +50,13 @@ def stream_model(messages, model=None):
     try:
         for kind, token in llm.stream_chat(messages, model):
             if kind == "thinking":
-                emit("thinking_delta", token)
+                emit(EVENT_THINKING, token)
             else:
                 content += token
-                emit("display_delta", token)
-        emit("display_flush")
+                emit(EVENT_DISPLAY, token)
+        emit(EVENT_FLUSH)
     except Exception as e:
-        emit("display_flush")
+        emit(EVENT_FLUSH)
         content = f"LLM 请求失败: {e}"
     return Response(content)
 
@@ -72,17 +81,17 @@ def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_
         if stop_event and stop_event.is_set():
             break
 
-        emit("before_send", messages, model)          # → compact 压缩
+        emit(EVENT_BEFORE_SEND, messages, model)          # → compact 压缩
 
         response = stream_model(messages, model)       # → display 流式渲染
         messages.append({"role": "assistant", "content": response.content})
-        emit("save", messages)                         # → history 存盘
+        emit(EVENT_SAVE, messages)                         # → history 存盘
 
         if not response.has_code():
             return messages
 
         feedback = execute_code(response.code)
         messages.append({"role": "user", "content": feedback})
-        emit("save", messages)                         # → history 存盘
+        emit(EVENT_SAVE, messages)                         # → history 存盘
 
     return messages
