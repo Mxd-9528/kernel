@@ -5,6 +5,7 @@
 触发用字符数估算（粗略但够；token 精确但要 tokenizer，YAGNI）。
 """
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -43,8 +44,23 @@ def split_history(history, keep=KEEP_ROUNDS):
     return system, conv[:split], conv[split:]
 
 
+def _dedup_tool_outputs(mid):
+    """完全相同的环境反馈（内容字节相同）保留最新一份，旧的替换为引用行。"""
+    seen = {}  # md5 -> 最新出现的索引
+    for i, m in enumerate(mid):
+        content = m.get("content", "")
+        if m.get("role") != "user" or not content.startswith("[环境反馈]"):
+            continue
+        h = hashlib.md5(content.encode("utf-8")).hexdigest()
+        if h in seen:
+            mid[seen[h]] = {"role": "user", "content": f"[环境反馈同下文 #{i}]"}
+        seen[h] = i
+    return mid
+
+
 def _compact_mid(mid, model):
     """压缩中间消息，返回桥接消息对 [user, assistant]."""
+    mid = _dedup_tool_outputs(list(mid))  # 拷贝，不改原列表
     summary = compress(mid, model)
     return [
         {"role": "user", "content": "（以下是已压缩的旧上下文摘要）"},

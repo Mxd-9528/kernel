@@ -271,6 +271,24 @@ def test_compact():
     assert any(m["role"] == "assistant" and "【摘要】" in m["content"] for m in new)
     assert new[-1] == {"role": "assistant", "content": "a9"}  # 最近6轮原样在末尾
     assert len(new) < len(conv(10))
+
+    # 去重：重复的 [环境反馈] 内容旧的替换为引用行，最新保留
+    from compact import _dedup_tool_outputs
+    mid = [
+        {"role": "user", "content": "[环境反馈] hello"},
+        {"role": "assistant", "content": "ok"},
+        {"role": "user", "content": "[环境反馈] hello"},   # 重复
+        {"role": "assistant", "content": "ok2"},
+        {"role": "user", "content": "[环境反馈] different"},
+        {"role": "assistant", "content": "ok3"},
+        {"role": "user", "content": "[环境反馈] hello"},   # 又重复
+    ]
+    out = _dedup_tool_outputs(list(mid))
+    assert out[0]["content"].startswith("[环境反馈同下文"), f"第 0 条应替换为引用: {out[0]}"
+    assert out[2]["content"].startswith("[环境反馈同下文"), f"第 2 条应替换为引用: {out[2]}"
+    assert out[4] == mid[4], "不同内容不应受影响"
+    assert out[6] == mid[6], "最新的一份完整保留"
+
     print("compact ok")
 
 
