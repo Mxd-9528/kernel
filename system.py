@@ -88,14 +88,14 @@ def list_skills(directory=_SKILLS_DIR):
 
 
 def build_system():
-    """组装完整系统提示词：prompt.txt + 预置函数清单 + 技能清单 + 可选 system_append.txt。"""
+    """组装完整系统提示词：prompt.md + 预置函数清单 + 技能清单 + 可选 system_append.md。"""
     here = Path(__file__).parent
-    out = (here / "prompt.txt").read_text("utf-8") + \
+    out = (here / "prompt.md").read_text("utf-8") + \
           "\n\n# 预置函数（已注入命名空间，直接调用，无需 import）\n\n" + list_tools()
     sk = list_skills()
     if sk:
         out += "\n\n# 技能\n\n" + sk
-    append_path = here / "system_append.txt"
+    append_path = here / "system_append.md"
     if append_path.exists():
         out += "\n\n" + append_path.read_text("utf-8")
     return out

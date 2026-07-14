@@ -54,7 +54,7 @@ inject.py 只在首次执行时把机件（agent、chat、compact 等）和 tool
 
 **系统提示词组装**
 
-system.py 的 `build_system()` 按固定顺序拼接：prompt.txt → 预置函数清单（扫描 tools/ 的签名+docstring） → 技能清单（扫描 skills/ 的 YAML frontmatter） → 可选的 system_append.txt。
+system.py 的 `build_system()` 按固定顺序拼接：prompt.md → 预置函数清单（扫描 tools/ 的签名+docstring） → 技能清单（扫描 skills/ 的 YAML frontmatter） → 可选的 system_append.md。
 
 **预置函数**
 
@@ -65,9 +65,9 @@ tools/ 下每个模块暴露一个与模块同名的函数。system.py 通过 `p
 - `models.json`：LLM 模型列表，key 为模型别名，value 含 url/model/key_env
 - `.env`：API key 等环境变量（setdefault 不覆盖已有）
 - `history.json`：对话历史持久化文件
-- `prompt.txt`：系统提示词主体
-- `compact_prompt.txt`：上下文压缩用提示词
-- `system_append.txt`：可选，拼在系统提示词末尾
+- `prompt.md`：系统提示词主体
+- `compact_prompt.md`：上下文压缩用提示词
+- `system_append.md`：可选，拼在系统提示词末尾
 
 **测试**
 
