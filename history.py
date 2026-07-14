@@ -31,6 +31,13 @@ def reset_history():
     return [{"role": "system", "content": build_system()}]
 
 
-def on_save(messages):
-    """事件驱动存盘。"""
-    save(messages)
+# ── 观察者 ──────────────────────────────────────────────────
+
+from observer import BaseObserver
+
+class _HistoryObserver(BaseObserver):
+    def save(self, messages):
+        save(messages)
+
+
+observer = _HistoryObserver()

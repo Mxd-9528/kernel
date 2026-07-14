@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 
+from observer import BaseObserver
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.theme import Theme
@@ -38,7 +39,7 @@ def _fold_exec_blocks(text):
     return _EXEC_RE.sub(_replacer, text)
 
 
-class _Spinner:
+class _Spinner(BaseObserver):
     """流式期间刷 spinner 行；flush 时 Rich 一次性渲染累加正文。
     两阶段计数：thinking → content，label 与 tokens 各自独立。"""
 
@@ -82,7 +83,7 @@ class _Spinner:
             sys.stdout.flush()
             self._stop.wait(0.1)
 
-    def flush(self):
+    def on_flush(self):
         """停 spinner、清行、Rich 渲染正文。幂等。"""
         if self._thread is not None:
             self._stop.set()
@@ -99,22 +100,10 @@ class _Spinner:
         self._label = "思考中"
         self._start = None
 
-
-_spinner = _Spinner()
-
-
-def on_thinking(token):
-    _spinner.on_thinking(token)
+    def display_msg(self, content):
+        """显示命令结果等非流式消息。"""
+        if content:
+            console.print(content)
 
 
-def on_delta(token):
-    _spinner.on_delta(token)
-
-
-def on_flush():
-    _spinner.flush()
-
-
-def on_display(content):
-    if content:
-        console.print(content)
+spinner = _Spinner()

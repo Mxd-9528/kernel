@@ -18,12 +18,13 @@ def _handle_sigint(signum, frame):
         _current_stop.set()
 
 
-def chat(model=None):
+def chat(model=None, *, observer=None):
     """连续对话——你一句、它干完、回你、再等你下一句。历史跨轮保留、跨启动接续。
 
     输入 exit 退出。斜杠命令：/new /model /help。
     按 Ctrl+C 停止：当前轮走完后回到输入，不继续下轮。
     model: None 用默认（models.json 第一个）。
+    observer: None 时静默（无显示、无存盘、无压缩）。
     """
     global _current_stop
     signal.signal(signal.SIGINT, _handle_sigint)
@@ -47,13 +48,15 @@ def chat(model=None):
         # 斜杠命令：直接调用
         if you.startswith("/"):
             messages = messages or []
-            messages, model = commands.handle(you, messages, model)
+            messages, model, display_msg = commands.handle(you, messages, model)
+            if display_msg and observer:
+                observer.display_msg(display_msg)
             continue
 
         # 自由文本：进入 agent
         stop_event = threading.Event()
         _current_stop = stop_event
-        messages = agent(you, messages=messages, model=model, stop_event=stop_event)
+        messages = agent(you, messages=messages, model=model, stop_event=stop_event, observer=observer)
         _current_stop = None
         if stop_event.is_set():
             print("\n（已停止）")

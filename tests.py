@@ -170,19 +170,19 @@ def test_display():
         assert s._buf == "hello <EXEC>code</EXEC> world", f"累加异常: {s._buf}"
         assert s._tokens == 2
 
-        # flush 触发一次渲染：Markdown 对象、内容已清洗
-        s.flush()
+        # on_flush 触发一次渲染：Markdown 对象、内容已清洗
+        s.on_flush()
         assert len(rendered) == 1, f"应渲染一次: {len(rendered)}"
         assert isinstance(rendered[0], Markdown)
         assert "<EXEC>" not in rendered[0].markup and "code" in rendered[0].markup
 
-        # 幂等：再 flush 不再渲染
-        s.flush()
-        assert len(rendered) == 1, "flush 非幂等"
+        # 幂等：再 on_flush 不再渲染
+        s.on_flush()
+        assert len(rendered) == 1, "on_flush 非幂等"
 
-        # 空 buf flush 不触发渲染
+        # 空 buf on_flush 不触发渲染
         rendered.clear()
-        s.flush()
+        s.on_flush()
         assert rendered == []
     finally:
         display.console.print = orig_print
@@ -274,42 +274,63 @@ def test_compact():
     print("compact ok")
 
 
-def test_event_system():
-    """事件系统：常量注册、emit 触发、多处理器、无处理器不崩、多次 emit 不遗漏。"""
-    from agent import on, emit
-    from agent import (EVENT_THINKING, EVENT_DISPLAY, EVENT_FLUSH,
-                       EVENT_BEFORE_SEND, EVENT_SAVE, EVENT_DISPLAY_MSG)
+def test_observer():
+    """Observer 协议：CompositeObserver 分发、BaseObserver 空实现、真实实例继承契约。"""
+    from observer import Observer, CompositeObserver, BaseObserver
 
+    # ── CompositeObserver 分发到所有子观察者 ──
     calls = []
+    class Spy(BaseObserver):
+        def on_thinking(self, token): calls.append(("thinking", token))
+        def on_delta(self, token): calls.append(("delta", token))
+        def on_flush(self): calls.append(("flush",))
+        def before_send(self, messages, model): calls.append(("before_send", len(messages), model))
+        def save(self, messages): calls.append(("save", len(messages)))
+        def display_msg(self, content): calls.append(("display_msg", content))
 
-    # 用常量注册处理器
-    @on(EVENT_THINKING)
-    def _h1(token):
-        calls.append(("thinking", token))
+    comp = CompositeObserver([Spy(), Spy()])
+    comp.on_thinking("t1")
+    comp.on_delta("d1")
+    comp.on_flush()
+    comp.before_send([{"role": "user"}], "gpt-4")
+    comp.save([{"role": "user"}])
+    comp.display_msg("hello")
 
-    @on(EVENT_DISPLAY)
-    def _h2(token):
-        calls.append(("display", token))
+    assert len(calls) == 12, f"6 方法 × 2 观察者 = 12 次调用，实际 {len(calls)}"
+    assert calls[0] == ("thinking", "t1") and calls[1] == ("thinking", "t1")
 
-    # emit 触发
-    emit(EVENT_THINKING, "t1")
-    emit(EVENT_DISPLAY, "d1")
-    assert calls == [("thinking", "t1"), ("display", "d1")], calls
+    # ── CompositeObserver 空列表不崩 ──
+    empty = CompositeObserver([])
+    empty.on_thinking("x")
+    empty.on_delta("x")
+    empty.on_flush()
+    empty.before_send([], "")
+    empty.save([])
+    empty.display_msg("x")
 
-    # 多次 emit 同一事件，处理器每次都调用
-    emit(EVENT_THINKING, "t2")
-    assert calls == [("thinking", "t1"), ("display", "d1"), ("thinking", "t2")]
+    # ── BaseObserver 所有方法可调用不崩，且返回 None ──
+    null = BaseObserver()
+    null.on_thinking("x")
+    null.on_delta("x")
+    null.on_flush()
+    null.before_send([], "")
+    null.save([])
+    null.display_msg("x")
 
-    # 无处理器的事件 emit 不崩
-    emit(EVENT_FLUSH)  # 没有注册处理器，应静默通过
+    # ── 真实观察者实例继承 BaseObserver，具有全部 6 个方法 ──
+    from display import spinner
+    from compact import observer as compact_obs
+    from history import observer as history_obs
 
-    # 常量定义完整性：5 个事件常量都已定义
-    for name in ("EVENT_THINKING", "EVENT_DISPLAY", "EVENT_FLUSH",
-                 "EVENT_BEFORE_SEND", "EVENT_SAVE", "EVENT_DISPLAY_MSG"):
-        from agent import __dict__ as agent_ns
-        assert name in agent_ns, f"缺少事件常量: {name}"
+    required = {"on_thinking", "on_delta", "on_flush", "before_send", "save", "display_msg"}
+    for name, obj in [("display.spinner", spinner),
+                       ("compact.observer", compact_obs),
+                       ("history.observer", history_obs)]:
+        methods = {m for m in dir(obj) if not m.startswith("_") and callable(getattr(obj, m))}
+        missing = required - methods
+        assert not missing, f"{name} 缺少方法: {missing}"
 
-    print("event_system ok")
+    print("observer ok")
 
 
 if __name__ == "__main__":

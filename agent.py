@@ -1,32 +1,8 @@
-"""决策-执行-观察 循环 + 事件钩子系统。"""
+"""决策-执行-观察 循环。"""
+from observer import Observer, CompositeObserver, BaseObserver
+
 import llm
 import runtime
-
-# ── 事件钩子 ──────────────────────────────────────────────────
-
-_hooks = {}
-
-# ── 事件常量：emit / on 共用，避免裸字符串拼写错误 ──────────────────
-
-EVENT_THINKING = "thinking_delta"
-EVENT_DISPLAY = "display_delta"
-EVENT_FLUSH = "display_flush"
-EVENT_BEFORE_SEND = "before_send"
-EVENT_SAVE = "save"
-EVENT_DISPLAY_MSG = "display"
-
-def on(event):
-    """注册事件处理器。"""
-    def decorator(fn):
-        _hooks.setdefault(event, []).append(fn)
-        return fn
-    return decorator
-
-def emit(event, *args, **kwargs):
-    """触发事件，依次调用所有已注册的处理器。"""
-    for fn in _hooks.get(event, []):
-        fn(*args, **kwargs)
-
 
 # ── 模型响应 ──────────────────────────────────────────────────
 
@@ -44,19 +20,21 @@ class Response:
         return runtime.extract_blocks(self.content)
 
 
-def stream_model(messages, model=None):
-    """流式调用 LLM，逐 token 触发 thinking_delta / display_delta，返回 Response。"""
+def stream_model(messages, model=None, *, observer=None):
+    """流式调用 LLM，逐 token 通知 observer，返回 Response。"""
+    if observer is None:
+        observer = BaseObserver()
     content = ""
     try:
         for kind, token in llm.stream_chat(messages, model):
             if kind == "thinking":
-                emit(EVENT_THINKING, token)
+                observer.on_thinking(token)
             else:
                 content += token
-                emit(EVENT_DISPLAY, token)
-        emit(EVENT_FLUSH)
+                observer.on_delta(token)
+        observer.on_flush()
     except Exception as e:
-        emit(EVENT_FLUSH)
+        observer.on_flush()
         content = f"LLM 请求失败: {e}"
     return Response(content)
 
@@ -71,8 +49,10 @@ def execute_code(code_blocks):
 _MAX_ITERS = 20
 
 
-def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_ITERS):
+def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_ITERS, observer=None):
     """决策-执行-观察 循环。"""
+    if observer is None:
+        observer = BaseObserver()
     if messages is None:
         messages = []
     messages.append({"role": "user", "content": prompt})
@@ -81,17 +61,17 @@ def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_
         if stop_event and stop_event.is_set():
             break
 
-        emit(EVENT_BEFORE_SEND, messages, model)          # → compact 压缩
+        observer.before_send(messages, model)          # → compact 压缩
 
-        response = stream_model(messages, model)       # → display 流式渲染
+        response = stream_model(messages, model, observer=observer)  # → display 流式渲染
         messages.append({"role": "assistant", "content": response.content})
-        emit(EVENT_SAVE, messages)                         # → history 存盘
+        observer.save(messages)                         # → history 存盘
 
         if not response.has_code():
             return messages
 
         feedback = execute_code(response.code)
         messages.append({"role": "user", "content": feedback})
-        emit(EVENT_SAVE, messages)                         # → history 存盘
+        observer.save(messages)                         # → history 存盘
 
     return messages
