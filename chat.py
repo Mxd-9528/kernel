@@ -1,4 +1,5 @@
 
+import shutil
 import signal
 import threading
 
@@ -37,7 +38,10 @@ def chat(model=None, *, observer=None):
     while True:
         try:
             you = input("> ")
-            sys.stdout.write("\x1b[1A\x1b[K")
+            # 清除 input() 回显行（多行时 \x1b[1A 不够，需按行数清）
+            lines = (len(you) + 2 + shutil.get_terminal_size().columns - 1) // shutil.get_terminal_size().columns
+            for _ in range(lines):
+                sys.stdout.write("\x1b[1A\x1b[K")
             sys.stdout.flush()
             console.print(f"> {you}", style="on grey30")
         except (EOFError, KeyboardInterrupt):
