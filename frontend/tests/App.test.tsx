@@ -28,11 +28,6 @@ describe("App", () => {
     expect(screen.getByText("你好！")).toBeTruthy()
   })
 
-  it("显示连接状态", () => {
-    render(<App />)
-    expect(screen.getByText(/已连接/)).toBeTruthy()
-  })
-
   it("有输入框和发送按钮", () => {
     render(<App />)
     expect(screen.getByPlaceholderText("输入消息...")).toBeTruthy()

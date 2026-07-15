@@ -17,7 +17,7 @@ export function InputArea({ onSend, disabled }: InputAreaProps) {
 
   return (
     <form onSubmit={handleSubmit} style={{
-      display: "flex", padding: 12, borderTop: "1px solid #eee", gap: 8,
+      display: "flex", flex: 1, padding: "8px 12px", gap: 8,
     }}>
       <input
         value={text}

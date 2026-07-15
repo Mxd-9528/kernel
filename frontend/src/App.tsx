@@ -19,11 +19,6 @@ function App() {
 
   return (
     <div className="container">
-      <div className="status">
-        <span>{status === "connected" ? "🟢 已连接" : status === "connecting" ? "🟡 连接中..." : "🔴 已断开"}</span>
-        <ThemeToggle />
-      </div>
-
       <div className="messages">
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
@@ -32,7 +27,10 @@ function App() {
         <div ref={bottomRef} />
       </div>
 
-      <InputArea onSend={send} disabled={status !== "connected"} />
+      <div className="bottom-bar">
+        <ThemeToggle />
+        <InputArea onSend={send} disabled={status !== "connected"} />
+      </div>
     </div>
   )
 }
