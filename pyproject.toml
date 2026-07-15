@@ -4,9 +4,10 @@ version = "0.1.0"
 description = "持久 IPython 内核上的极简自驱动 agent——模型写代码块、执行、看三元组反馈、迭代"
 requires-python = ">=3.8"
 dependencies = [
-    "ipython",   # 持久执行内核（run.py / inject.py）
-    "rich",      # 终端 Markdown 渲染（agent.py）
-    "pyyaml",    # 解析 SKILL.md 的 YAML frontmatter（skills.py）
+    "ipython",        # 持久执行内核（run.py / inject.py）
+    "rich",           # 终端 Markdown 渲染（agent.py）
+    "pyyaml",         # 解析 SKILL.md 的 YAML frontmatter（skills.py）
+    "websockets",     # WebSocket 服务端（websocket_server.py）
 ]
 
 [tool.ruff]

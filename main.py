@@ -11,5 +11,31 @@ observer = CompositeObserver([spinner, compact_observer, history_observer])
 
 if __name__ == "__main__":
     import sys
-    model = sys.argv[1] if len(sys.argv) > 1 else None
-    chat(model=model, observer=observer)
+    import threading
+
+    args = [a for a in sys.argv[1:] if a != "--web"]
+    model = args[0] if args else None
+
+    if "--web" in sys.argv:
+        from websocket_observer import WebSocketObserver
+        from websocket_server import serve
+
+        ws_obs = WebSocketObserver()
+        web_observer = CompositeObserver([ws_obs, compact_observer, history_observer])
+
+        t = threading.Thread(target=serve, args=(ws_obs,), daemon=True)
+        t.start()
+
+        # 自动打开浏览器（优先 VS Code 内置）
+        import os as _os, subprocess as _sp
+        url = "http://localhost:8765"
+        print(f"  → 浏览器打开 {url}")
+        try:
+            _sp.run(f"code --open-url {url}", shell=True, timeout=5)
+        except Exception:
+            _os.startfile(url)
+
+        chat(model=model, observer=web_observer,
+             input_source=lambda: ws_obs.input_queue.get())
+    else:
+        chat(model=model, observer=observer)

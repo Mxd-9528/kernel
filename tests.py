@@ -351,6 +351,73 @@ def test_observer():
     print("observer ok")
 
 
+def test_websocket_observer():
+    """WebSocketObserver：继承 BaseObserver，observer 方法序列化为 JSON 消息入队，
+    before_send/save 空操作，所有方法非阻塞。"""
+    from observer import BaseObserver
+    from websocket_observer import WebSocketObserver
+    import queue as q_module
+
+    # ── 继承 BaseObserver ──
+    obs = WebSocketObserver()
+    assert isinstance(obs, BaseObserver), "WebSocketObserver 应继承 BaseObserver"
+
+    # ── 6 个方法齐全 ──
+    required = {"on_thinking", "on_delta", "on_flush", "before_send", "save", "display_msg"}
+    methods = {m for m in dir(obs) if not m.startswith("_") and callable(getattr(obs, m))}
+    missing = required - methods
+    assert not missing, f"缺少方法: {missing}"
+
+    # ── messages / input_queue 属性暴露队列，类型为 Queue ──
+    assert isinstance(obs.messages, q_module.Queue), "messages 应是 Queue 实例"
+    assert isinstance(obs.input_queue, q_module.Queue), "input_queue 应是 Queue 实例"
+
+    # ── on_thinking(token) → {"type": "thinking", "token": token} ──
+    obs.on_thinking("思考中")
+    msg = obs.messages.get(timeout=0.1)
+    assert msg == {"type": "thinking", "token": "思考中"}, f"on_thinking 消息错误: {msg}"
+
+    # ── on_delta(token) → {"type": "delta", "token": token} ──
+    obs.on_delta("hello")
+    msg = obs.messages.get(timeout=0.1)
+    assert msg == {"type": "delta", "token": "hello"}, f"on_delta 消息错误: {msg}"
+
+    # ── on_flush() → {"type": "flush"} ──
+    obs.on_flush()
+    msg = obs.messages.get(timeout=0.1)
+    assert msg == {"type": "flush"}, f"on_flush 消息错误: {msg}"
+
+    # ── display_msg(content) → {"type": "display", "content": content} ──
+    obs.display_msg("hello world")
+    msg = obs.messages.get(timeout=0.1)
+    assert msg == {"type": "display", "content": "hello world"}, f"display_msg 消息错误: {msg}"
+
+    # ── before_send/save 空操作，不入队 ──
+    obs.before_send([{"role": "user"}], "gpt-4")
+    obs.save([{"role": "user"}])
+    assert obs.messages.empty(), f"before_send/save 不应入队，但队列非空"
+
+    # ── 顺序保证：多个调用的入队顺序正确 ──
+    obs.on_thinking("t1")
+    obs.on_delta("d1")
+    obs.on_flush()
+    expected = [
+        {"type": "thinking", "token": "t1"},
+        {"type": "delta", "token": "d1"},
+        {"type": "flush"},
+    ]
+    for exp in expected:
+        msg = obs.messages.get(timeout=0.1)
+        assert msg == exp, f"顺序错误: 期望 {exp}, 实际 {msg}"
+
+    # ── 非阻塞验证：入队立即返回（不抛异常即非阻塞） ──
+    obs.on_delta("fast")
+    msg = obs.messages.get(timeout=0.1)
+    assert msg == {"type": "delta", "token": "fast"}
+
+    print("websocket_observer ok")
+
+
 if __name__ == "__main__":
     # 自动扫本模块 test_* 函数按定义顺序执行；加测试只加 def test_xxx，不用改此段。
     for name, fn in list(globals().items()):
