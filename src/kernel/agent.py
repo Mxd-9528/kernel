@@ -1,5 +1,5 @@
 """决策-执行-观察 循环。"""
-from .observer import Observer, CompositeObserver, BaseObserver
+from .observer import BaseObserver
 
 from . import llm
 from . import runtime

@@ -1,6 +1,5 @@
 """compact 模块测试。"""
 
-import threading
 
 
 def test_compact():

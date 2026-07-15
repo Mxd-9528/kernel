@@ -2,7 +2,6 @@
 import signal
 import threading
 
-import sys
 from . import commands
 from .llm import default_model
 from .agent import agent

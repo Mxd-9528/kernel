@@ -18,5 +18,9 @@ __pycache__/
 # 用户技能资产（不属于项目）
 skills/
 
+# 构建产物
+*.egg-info/
+
+
 # 临时笔记
 enter-plan-mode-notes.md

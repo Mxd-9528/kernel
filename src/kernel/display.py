@@ -34,8 +34,8 @@ def _fold_exec_blocks(text):
             preview = preview[:55] + "..."
         preview = preview.replace("`", "'")
         if n == 1:
-            return "```\n%s\n```" % preview
-        return "```\n代码块 · %d 行 · %s\n```" % (n, preview)
+            return f"```\n{preview}\n```"
+        return f"```\n代码块 · {n} 行 · {preview}\n```"
     return _EXEC_RE.sub(_replacer, text)
 
 

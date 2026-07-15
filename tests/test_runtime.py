@@ -1,6 +1,5 @@
 """runtime 模块测试。"""
 
-import sys
 
 
 def test_run_cell():

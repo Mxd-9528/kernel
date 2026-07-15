@@ -23,22 +23,28 @@ class CompositeObserver:
         self._observers = observers
 
     def on_thinking(self, token):
-        for o in self._observers: o.on_thinking(token)
+        for o in self._observers:
+            o.on_thinking(token)
 
     def on_delta(self, token):
-        for o in self._observers: o.on_delta(token)
+        for o in self._observers:
+            o.on_delta(token)
 
     def on_flush(self):
-        for o in self._observers: o.on_flush()
+        for o in self._observers:
+            o.on_flush()
 
     def before_send(self, messages, model):
-        for o in self._observers: o.before_send(messages, model)
+        for o in self._observers:
+            o.before_send(messages, model)
 
     def save(self, messages):
-        for o in self._observers: o.save(messages)
+        for o in self._observers:
+            o.save(messages)
 
     def display_msg(self, content):
-        for o in self._observers: o.display_msg(content)
+        for o in self._observers:
+            o.display_msg(content)
 
 
 class BaseObserver:

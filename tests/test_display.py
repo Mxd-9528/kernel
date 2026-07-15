@@ -13,7 +13,8 @@ def test_spinner_state_machine():
     display.console.print = lambda *a, **kw: rendered.append(a[0])
     try:
         t = threading.Thread(target=lambda: None)
-        t.start(); t.join()
+        t.start()
+        t.join()
         s._thread = t
 
         s.on_thinking("t1")

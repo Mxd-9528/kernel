@@ -28,7 +28,8 @@ def main():
         t.start()
 
         # 自动打开浏览器（优先 VS Code 内置）
-        import os as _os, subprocess as _sp
+        import os as _os
+        import subprocess as _sp
         url = "http://localhost:8765"
         print(f"  → 浏览器打开 {url}")
         try:
