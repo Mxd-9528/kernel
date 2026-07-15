@@ -4,18 +4,27 @@ version = "0.1.0"
 description = "持久 IPython 内核上的极简自驱动 agent——模型写代码块、执行、看三元组反馈、迭代"
 requires-python = ">=3.8"
 dependencies = [
-    "ipython",        # 持久执行内核（run.py / inject.py）
-    "rich",           # 终端 Markdown 渲染（agent.py）
-    "pyyaml",         # 解析 SKILL.md 的 YAML frontmatter（skills.py）
-    "websockets",     # WebSocket 服务端（websocket_server.py）
+    "ipython",        # 持久执行内核（runtime.py / inject.py）
+    "rich",           # 终端 Markdown 渲染（display.py）
+    "pyyaml",         # 解析 SKILL.md 的 YAML frontmatter（system.py）
+    "websockets",     # WebSocket 服务端（web/websocket_server.py）
 ]
 
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+kernel = ["*.md", "*.json", "*.html"]
+
+[project.scripts]
+ma = "kernel.main:main"
+
 [tool.ruff]
-target-version = "py38"  # 按 3.8 检查，3.9+ 语法（如 dict | 合并）会被 ruff 揪出
+target-version = "py38"
 
 [tool.ruff.lint]
-extend-select = ["UP"]  # pyupgrade：标记不兼容/可现代化的写法
-
-# load.py 是重导出文件（把函数注入 IPython 命名空间），import 即用途，豁免未使用告警
-[tool.ruff.lint.per-file-ignores]
-"load.py" = ["F401"]
+extend-select = ["UP"]

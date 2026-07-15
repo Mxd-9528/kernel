@@ -5,8 +5,8 @@ import re
 import tempfile
 import threading
 
-import llm
-import runtime
+from .. import llm
+from .. import runtime
 
 _MAX_ITERS = 20
 
@@ -21,7 +21,7 @@ class _SubAgentThread(threading.Thread):
         self._result = None
 
     def run(self):
-        from system import build_system
+        from ..system import build_system
 
         system_prompt = build_system()
         # 排除 agent 自身，避免子代理递归调用

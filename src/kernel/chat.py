@@ -2,11 +2,11 @@
 import signal
 import threading
 
-import commands
 import sys
-from llm import default_model
-from agent import agent
-from history import load
+from . import commands
+from .llm import default_model
+from .agent import agent
+from .history import load
 
 # signal handler 通过此 cell 访问当前轮次的 stop_event
 _current_stop = None
@@ -33,7 +33,7 @@ def chat(messages=None, *, model=None, observer=None, input_source=None):
     if messages is None:
         messages = load()
     if messages is None:
-        from system import build_system
+        from .system import build_system
         messages = [{"role": "system", "content": build_system()}]
 
     _get_input = input_source or (lambda: input("> "))

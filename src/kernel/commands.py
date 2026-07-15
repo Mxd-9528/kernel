@@ -1,5 +1,5 @@
-from history import reset_history
-from llm import list_models, default_model
+from .history import reset_history
+from .llm import list_models, default_model
 
 _HELP = """内置命令：
   /new           清空历史，开一段新对话

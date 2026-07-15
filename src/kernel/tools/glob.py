@@ -10,7 +10,7 @@ import fnmatch
 import glob as _glob
 import os
 
-from tools.exclude import _EXCLUDE, _EXCLUDE_FILES  # 单一事实源
+from .exclude import _EXCLUDE, _EXCLUDE_FILES  # 单一事实源
 
 
 def _norm(path):

@@ -14,7 +14,7 @@ import inspect
 import os
 import sys
 
-from tools.exclude import _EXCLUDE
+from .exclude import _EXCLUDE
 
 _cache = {}
 _cache_fp = None

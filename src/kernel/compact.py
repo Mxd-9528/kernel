@@ -9,7 +9,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from llm import stream_chat
+from .llm import stream_chat
 
 KEEP_ROUNDS = 6       # 保留最近几轮完整对话（数 assistant）
 THRESHOLD = 100_000    # 中间可压部分超过多少字符就触发
@@ -88,7 +88,7 @@ def compress(messages, model):
 
 # ── 观察者 ──────────────────────────────────────────────────
 
-from observer import BaseObserver
+from .observer import BaseObserver
 
 class _CompactObserver(BaseObserver):
     def before_send(self, messages, model):

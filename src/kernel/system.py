@@ -9,7 +9,7 @@ import inspect
 import pkgutil
 from pathlib import Path
 
-import tools
+from . import tools
 
 _SKILLS_DIR = Path(__file__).parent / "skills"
 
@@ -21,7 +21,7 @@ def presets():
     """扫 tools/，返回 [(name, func), ...]：每个模块里与模块同名的函数。"""
     out = []
     for info in pkgutil.iter_modules(tools.__path__):
-        mod = importlib.import_module(f"tools.{info.name}")
+        mod = importlib.import_module(f"kernel.tools.{info.name}")
         func = getattr(mod, info.name, None)
         if inspect.isfunction(func):
             out.append((info.name, func))

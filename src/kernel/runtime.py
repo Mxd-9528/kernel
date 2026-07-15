@@ -4,7 +4,7 @@ import traceback
 from IPython.core.interactiveshell import InteractiveShell
 from IPython.utils.capture import capture_output
 
-from inject import inject
+from .inject import inject
 
 _MAX_RUN_SECS = 60  # 单代码块硬超时秒数，超过则放弃等待、抛 TimeoutError（防止代码块永久阻塞卡住循环）
 

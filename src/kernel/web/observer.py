@@ -4,7 +4,7 @@
 调用者（agent 循环）调用 observer 方法后立即返回，不感知网络边界。
 chat() 通过 input_source=lambda: observer.input_queue.get() 读取用户输入。
 """
-from observer import BaseObserver
+from ..observer import BaseObserver
 from queue import Queue
 
 

@@ -1,15 +1,16 @@
 '''入口：组合观察者，启动对话。'''
-from observer import CompositeObserver
-from display import spinner
-from compact import observer as compact_observer
-from history import observer as history_observer
-from chat import chat
+from .observer import CompositeObserver
+from .display import spinner
+from .compact import observer as compact_observer
+from .history import observer as history_observer
+from .chat import chat
 
 # ── 显式组合观察者（非 import 副作用） ──────────────────────────
 
 observer = CompositeObserver([spinner, compact_observer, history_observer])
 
-if __name__ == "__main__":
+
+def main():
     import sys
     import threading
 
@@ -17,8 +18,8 @@ if __name__ == "__main__":
     model = args[0] if args else None
 
     if "--web" in sys.argv:
-        from websocket_observer import WebSocketObserver
-        from websocket_server import serve
+        from .web.observer import WebSocketObserver
+        from .web.server import serve
 
         ws_obs = WebSocketObserver()
         web_observer = CompositeObserver([ws_obs, compact_observer, history_observer])
@@ -39,3 +40,7 @@ if __name__ == "__main__":
              input_source=lambda: ws_obs.input_queue.get())
     else:
         chat(model=model, observer=observer)
+
+
+if __name__ == "__main__":
+    main()

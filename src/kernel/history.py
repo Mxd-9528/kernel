@@ -27,13 +27,13 @@ def load(path=_PATH):
 def reset_history():
     """清空持久化文件，返回包含系统提示的初始消息列表。"""
     save([])
-    from system import build_system
+    from .system import build_system
     return [{"role": "system", "content": build_system()}]
 
 
 # ── 观察者 ──────────────────────────────────────────────────
 
-from observer import BaseObserver
+from .observer import BaseObserver
 
 class _HistoryObserver(BaseObserver):
     def save(self, messages):

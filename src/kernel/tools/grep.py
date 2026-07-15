@@ -9,7 +9,7 @@ import fnmatch
 import os
 import re
 
-from tools.exclude import _EXCLUDE, _EXCLUDE_FILES
+from .exclude import _EXCLUDE, _EXCLUDE_FILES
 
 _MODES = {"content", "files_with_matches", "count"}
 

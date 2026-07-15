@@ -1,11 +1,12 @@
-$kernelDir = $PSScriptRoot
+﻿$kernelDir = $PSScriptRoot
 $line = @"
 # ma 命令块
 function ma {
-    if (`$args[0] -eq "ui" -or `$args[0] -eq "web") {
-        python "$kernelDir\main.py" --web
+    $env:PYTHONPATH = "$kernelDir\src"
+    if ($args[0] -eq "ui" -or $args[0] -eq "web") {
+        python -m kernel --web
     } else {
-        python "$kernelDir\main.py" @args
+        python -m kernel @args
     }
 }
 "@
@@ -17,8 +18,18 @@ $content = (Get-Content $profilePath -Raw -ErrorAction SilentlyContinue) -replac
 $marker = "# ma 命令块"
 
 # 移除旧版 function ma（单行或多行，直到空行或下一个声明）
-$content = $content -replace "(?ms)^function ma\\b.*?(?=`r?`n`r?`n|`r?`nfunction |`$)", ""
-$content = $content -replace "`r?`n+", "`n"
+$lines = $content -split "`n"
+$newLines = @()
+$skip = $false
+foreach ($line in $lines) {
+    if ($line -match '^function ma\b') { $skip = $true; continue }
+    if ($skip) {
+        if ($line -match '^$' -or $line -match '^function ') { $skip = $false }
+        if ($skip) { continue }
+    }
+    $newLines += $line
+}
+$content = $newLines -join "`n"
 
 # 写入当前版本
 if ($content -and $content.Contains($marker)) {

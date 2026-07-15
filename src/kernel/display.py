@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 
-from observer import BaseObserver
+from .observer import BaseObserver
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.theme import Theme
