@@ -21,6 +21,12 @@ skills/
 # 构建产物
 *.egg-info/
 
+# Node.js（前端项目独立于 frontend/ 目录，根目录不应有 node_modules）
+node_modules/
+
+# 前端构建产物（Vite build → src/kernel/web/static/）
+src/kernel/web/static/
+
 
 # 临时笔记
 enter-plan-mode-notes.md

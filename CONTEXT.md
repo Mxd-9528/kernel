@@ -31,7 +31,7 @@ agent.py 中的 `agent()` 是循环主体。每轮最多 20 次迭代（`max_ite
 | `display.py` | 流式输出渲染（_Spinner 继承 BaseObserver） | main |
 | `commands.py` | 斜杠命令：/new /model /help | chat |
 | `tools/` | 预置函数包，每模块一个同名函数，由 system.py 扫描注册 | inject, system |
-| `web/` | WebSocket 观察者 + HTTP 服务 + 前端 HTML | main |
+| `web/` | WebSocket 观察者 + HTTP 服务 + React 前端 | main |
 | `skills/` | 技能包（.gitignore 排除），每子目录一个 SKILL.md，按需 read() 加载 | — |
 
 **Observer 协议**
@@ -61,18 +61,22 @@ tools/ 下每个模块暴露一个与模块同名的函数。system.py 通过 `p
 
 **配置**
 
-所有配置文件在 `src/kernel/` 下：
+所有项目配置文件在项目根目录下：
 - `models.json`：LLM 模型列表，key 为模型别名，value 含 url/model/key_env
 - `.env`：API key 等环境变量（setdefault 不覆盖已有）
-- `history.json`：对话历史持久化文件
-- `prompt.md`：系统提示词主体
-- `compact_prompt.md`：上下文压缩用提示词
-- `system_append.md`：可选，拼在系统提示词末尾
+- `history.json`：对话历史持久化文件（.gitignore 排除）
+- `prompt.md`：系统提示词主体（在 `src/kernel/` 内）
+- `compact_prompt.md`：上下文压缩用提示词（在 `src/kernel/` 内）
+- `system_append.md`：可选，拼在系统提示词末尾（在 `src/kernel/` 内）
 
 **测试**
 
-`python -m pytest tests/` 一次性跑全部 32 个测试。测试目录无 `__init__.py`（非包，避免命名空间冲突），每模块一个测试文件，pytest 自动发现。
+- `python -m pytest tests/` — Python 测试（32 个），pytest 自动发现
+- `cd frontend && npm test` — 前端测试（vitest），自动发现 `frontend/tests/**/*.test.{ts,tsx}`
+
+每模块一个测试文件。Python 测试在 `tests/`，前端测试在 `frontend/tests/`，各自遵循生态约定。
 
 **代码质量**
 
-`ruff check src/ tests/` 检查代码风格。pyproject.toml 中已配置 `[tool.ruff]`，target-version py38，extend-select UP（pyupgrade 规则）。
+- Python：`ruff check src/ tests/`，pyproject.toml 中配置
+- TypeScript：`cd frontend && npx tsc -b --noEmit`，类型检查

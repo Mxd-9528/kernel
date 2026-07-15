@@ -3,7 +3,7 @@
 隐藏的决策：
   1. asyncio 事件循环 —— 调用者不感知
   2. Queue.get() 同步 → 异步（asyncio.to_thread）
-  3. WebSocket / HTTP 路径分发（/ vs /ws vs 其他）
+  3. WebSocket / HTTP 路径分发（/ws vs 静态文件）
   4. 消息缓冲 —— 新客户端连接后补发历史消息
 
 接口：serve(observer, host, port) —— 阻塞当前线程。
@@ -13,18 +13,32 @@ import json
 from pathlib import Path
 from queue import Empty
 
-from websockets.asyncio.server import serve as ws_serve
+from websockets.asyncio.server import Response, serve as ws_serve
 from websockets.exceptions import ConnectionClosed
+from websockets.http11 import Headers
 
-# 模块加载时缓存 HTML，避免每次请求读磁盘
-_HTML = None
+_STATIC = Path(__file__).parent / "static"
 
-def _load_html():
-    global _HTML
-    if _HTML is None:
-        p = Path(__file__).parent / "frontend.html"
-        _HTML = p.read_text("utf-8") if p.exists() else None
-    return _HTML
+# MIME types only for what Vite outputs
+_MIME = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "application/javascript",
+    ".css": "text/css",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+}
+
+
+def _serve_static(path: str):
+    """返回静态文件内容 + MIME type，不存在返回 None。"""
+    # 安全：拒绝路径穿越
+    safe = Path(_STATIC, path.lstrip("/")).resolve()
+    if not str(safe).startswith(str(_STATIC.resolve())):
+        return None
+    if not safe.is_file():
+        return None
+    return safe.read_bytes(), _MIME.get(safe.suffix, "application/octet-stream")
 
 
 async def _broadcast(observer, connections, history):
@@ -56,21 +70,21 @@ async def _broadcast(observer, connections, history):
 
 
 async def _process_request(connection, request):
-    """HTTP 请求处理：/ → frontend.html，/ws → 升级 WebSocket，其他 → 404。"""
+    """HTTP 请求处理：/ws → 升级 WebSocket，/ → index.html，其他 → 静态文件。"""
     path = getattr(request, "path", "/")
-
-    if path == "/":
-        html = _load_html()
-        if html is None:
-            return connection.respond(404, "frontend.html not found")
-        response = connection.respond(200, html)
-        response.headers["Content-Type"] = "text/html; charset=utf-8"
-        return response
 
     if path == "/ws":
         return None
 
-    return connection.respond(404, "Not Found")
+    # 默认路径 → index.html
+    file_path = path if path != "/" else "/index.html"
+
+    result = _serve_static(file_path)
+    if result is None:
+        return connection.respond(404, "Not Found")
+
+    content, mime = result
+    return Response(200, "OK", Headers({"Content-Type": mime}), content)
 
 
 def serve(observer, host="localhost", port=8765):
@@ -79,13 +93,12 @@ def serve(observer, host="localhost", port=8765):
     前置条件：
       - observer.messages 是 queue.Queue 实例
       - observer.input_queue 是 queue.Queue 实例
-      - frontend.html 存在于模块同目录
-    后置条件：/ws 接受 WebSocket 连接，队列消息 JSON 广播；/ 返回 HTML。
+      - static/ 目录存在于模块同目录
+    后置条件：/ws 接受 WebSocket 连接，/ 返回 React 前端。
     """
     from queue import Queue
     assert isinstance(observer.messages, Queue), "observer.messages 必须是 queue.Queue"
     assert isinstance(observer.input_queue, Queue), "observer.input_queue 必须是 queue.Queue"
-    assert _load_html() is not None, "frontend.html 不存在"
 
     connections = set()
     history = []

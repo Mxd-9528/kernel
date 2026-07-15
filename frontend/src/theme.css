@@ -1,0 +1,217 @@
+/* 亮色主题 */
+:root,
+[data-theme="light"] {
+  --color-primary: #f54e00;
+  --color-primary-active: #d04200;
+  --color-canvas: #f7f7f4;
+  --color-canvas-soft: #fafaf7;
+  --color-surface: #ffffff;
+  --color-hairline: #e6e5e0;
+  --color-hairline-strong: #cfcdc4;
+  --color-ink: #26251e;
+  --color-body: #5a5852;
+  --color-muted: #807d72;
+  --color-muted-soft: #a09c92;
+  --color-on-primary: #ffffff;
+  --color-thinking: #dfa88f;
+  --color-thinking-border: #c8957a;
+  --color-system: #e6e5e0;
+  --color-success: #1f8a65;
+  --color-error: #cf2d56;
+}
+
+/* 暗色主题 */
+[data-theme="dark"] {
+  --color-primary: #ff6b2b;
+  --color-primary-active: #e55a1a;
+  --color-canvas: #1e1e1c;
+  --color-canvas-soft: #252523;
+  --color-surface: #2a2a28;
+  --color-hairline: #383835;
+  --color-hairline-strong: #4a4a46;
+  --color-ink: #f0f0ed;
+  --color-body: #b5b3ad;
+  --color-muted: #8a8882;
+  --color-muted-soft: #6a6862;
+  --color-on-primary: #ffffff;
+  --color-thinking: #3a3028;
+  --color-thinking-border: #5a4a3a;
+  --color-system: #333330;
+  --color-success: #2ea87a;
+  --color-error: #e04060;
+}
+
+/* 全局 */
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--color-canvas);
+  color: var(--color-body);
+}
+
+/* 代码块 — 电视机风格 */
+.code-block {
+  margin: 4px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #1a1a18;
+  border: 1px solid #333;
+  position: relative;
+  cursor: pointer;
+}
+.code-block-inline {
+  padding: 8px 12px;
+  margin: 2px 0;
+  border-radius: 6px;
+  font-family: JetBrains Mono, Fira Code, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-x: auto;
+  color: #d4d4d0;
+  border: 1px solid #333;
+}
+.code-block-lang {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #555;
+  z-index: 1;
+}
+.code-block-preview {
+  margin: 0;
+  padding: 6px 12px;
+  font-family: JetBrains Mono, Fira Code, monospace;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow: hidden;
+  color: #999;
+  max-height: calc(12px * 1.3 * 3 + 12px);
+}
+.code-block-body {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: JetBrains Mono, Fira Code, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-x: auto;
+  color: #d4d4d0;
+  white-space: pre;
+}
+.code-block-body code,
+.code-block-preview code {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* 消息气泡 */
+.bubble {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+}
+.bubble-user {
+  background: var(--color-surface);
+}
+.bubble-assistant {
+  background: var(--color-surface);
+}
+.bubble-thinking {
+  background: var(--color-thinking);
+  border-left: 3px solid var(--color-thinking-border);
+  cursor: pointer;
+}
+.bubble-system {
+  background: var(--color-system);
+  text-align: center;
+  color: var(--color-muted);
+}
+.thinking-header {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.bubble-text {
+  margin: 4px 0 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-body);
+}
+
+/* Markdown 渲染 */
+.bubble-assistant h1 { font-size: 1.3em; color: var(--color-ink); font-weight: 600; margin: 8px 0 4px; }
+.bubble-assistant h2 { font-size: 1.15em; color: var(--color-ink); font-weight: 600; margin: 6px 0 3px; }
+.bubble-assistant h3 { font-size: 1.05em; color: var(--color-ink); font-weight: 600; margin: 4px 0 2px; }
+.bubble-assistant h4, .bubble-assistant h5, .bubble-assistant h6 {
+  color: var(--color-ink); font-weight: 600; margin: 4px 0 2px;
+}
+.bubble-assistant p { margin: 2px 0 4px; color: var(--color-body); line-height: 1.4; }
+.bubble-assistant a { color: var(--color-primary); text-decoration: none; }
+.bubble-assistant a:hover { text-decoration: underline; }
+.bubble-assistant ul, .bubble-assistant ol { padding-left: 20px; margin: 2px 0 4px; }
+.bubble-assistant li { color: var(--color-body); margin: 1px 0; }
+.bubble-assistant blockquote {
+  border-left: 3px solid var(--color-hairline-strong);
+  padding-left: 10px;
+  margin: 4px 0;
+  color: var(--color-muted);
+}
+.bubble-assistant hr { border: none; border-top: 1px solid var(--color-hairline); margin: 6px 0; }
+.bubble-assistant table {
+  border-collapse: collapse; width: 100%; margin: 4px 0;
+  border: 1px solid var(--color-hairline);
+}
+.bubble-assistant th, .bubble-assistant td {
+  padding: 4px 8px; text-align: left;
+  border: 1px solid var(--color-hairline);
+}
+.bubble-assistant th { background: var(--color-canvas-soft); color: var(--color-ink); font-weight: 600; }
+.bubble-assistant tr:nth-child(even) td { background: var(--color-canvas-soft); }
+.bubble-assistant pre {
+  background: #1a1a18;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  margin: 4px 0;
+}
+.bubble-assistant pre code {
+  font-family: JetBrains Mono, Fira Code, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #d4d4d0;
+}
+.md-inline-code {
+  background: var(--color-canvas-soft);
+  font-family: JetBrains Mono, Fira Code, monospace;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--color-body);
+}
+
+/* 流式进度 */
+.streaming-indicator {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+/* 主题切换 */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}

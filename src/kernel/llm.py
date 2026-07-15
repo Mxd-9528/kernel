@@ -5,6 +5,9 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+# 导入时缓存，因为 agent.py 子代理会 os.chdir(tmpdir)
+_ROOT = Path.cwd().resolve()
+
 _ENV_LOADED = False
 
 
@@ -14,7 +17,7 @@ def _load_env():
     if _ENV_LOADED:
         return
     _ENV_LOADED = True
-    env = Path(__file__).parent / ".env"
+    env = _ROOT / ".env"
     if not env.exists():
         return
     for line in env.read_text("utf-8").splitlines():
@@ -26,7 +29,7 @@ def _load_env():
 
 
 def list_models():
-    return json.loads((Path(__file__).parent / "models.json").read_text("utf-8"))
+    return json.loads((_ROOT / "models.json").read_text("utf-8"))
 
 
 def default_model():

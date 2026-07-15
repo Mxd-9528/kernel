@@ -1,6 +1,6 @@
 # kernel
 
-持久 IPython 内核上的自驱动 agent。模型通过写 `<EXEC>` Python 代码块来感知和改变环境——回代码 → 执行 → 看反馈 → 再回代码 → 直到做完。
+持久 IPython 内核的自驱动 agent。模型通过写 `<EXEC>` Python 代码块来感知和改变环境——回代码 → 执行 → 看反馈 → 再回代码 → 直到做完。
 
 不是「工具调用」范式。预置函数只是预加载进内核命名空间的普通函数，不够用直接写 Python。
 
@@ -9,9 +9,17 @@
 ## 跑起来
 
 ```bash
-pip install -e .            # 装依赖（ipython, rich, pyyaml）
-ma                          # 启动对话
-ma ark-code                 # 指定模型（名取自 models.json）
+pip install -e .            # 装依赖
+ma                          # 终端对话
+ma --web                    # 启动 WebSocket 后端（端口 8765）
+```
+
+浏览器面板（需先 `ma --web`）：
+
+```bash
+cd frontend && npm install     # 仅首次：装前端依赖
+cd frontend && npm run dev     # 启动 Vite dev server（端口 5173）
+# 浏览器打开 http://localhost:5173
 ```
 
 对话内命令：
@@ -22,7 +30,7 @@ ma ark-code                 # 指定模型（名取自 models.json）
 | `/new` | 清空历史，开一段新对话 |
 | `/model <名>` | 切换模型（不带名则显示当前+可选） |
 
-> `models.json` 配 url/key_env/model。**默认模型 = 文件第一个**，换默认就把想要的挪到最前。key 真值存 `.env`。
+> `models.json` 配 url/key_env/model。**默认模型 = 文件第一个**，换默认就把想要的挪到最前。key 值存 `.env`。
 
 ## 加一个预置函数
 
@@ -30,12 +38,16 @@ ma ark-code                 # 指定模型（名取自 models.json）
 
 ## 加一个技能
 
-在 `skills/` 建 `<名字>/SKILL.md`，开头写 YAML frontmatter（`name:` / `description:`）。完事——自动发现，模型需要时自己 `read` 加载正文（不预加载，省 token）。
+在 `skills/` 建 `<名字>/SKILL.md`，开头写 YAML frontmatter（`name:` / `description:`）。自动发现，模型需要时自己 `read` 加载正文（不预加载，省 token）。
 
 ## 测试
 
 ```bash
-python tests.py             # 跑全部
-python tests_tools.py       # 只跑工具测试
-uvx ruff check .            # 静态检查
+# Python
+python -m pytest tests/     # 32 个测试
+ruff check src/ tests/      # 代码检查
+
+# 前端
+cd frontend && npm test        # vitest
+cd frontend && npx tsc -b --noEmit  # TypeScript 类型检查
 ```

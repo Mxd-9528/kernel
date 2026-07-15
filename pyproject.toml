@@ -18,7 +18,8 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-kernel = ["*.md", "*.json", "*.html"]
+kernel = ["*.md"]
+"kernel.web" = ["static/**"]
 
 [project.scripts]
 ma = "kernel.main:main"

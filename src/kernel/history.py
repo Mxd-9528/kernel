@@ -8,7 +8,9 @@ import os
 from pathlib import Path
 
 
-_PATH = Path(os.environ.get("HISTORY_PATH", Path(__file__).parent / "history.json"))
+# 导入时缓存，避免 os.chdir() 后路径漂移
+_ROOT = Path.cwd().resolve()
+_PATH = Path(os.environ.get("HISTORY_PATH", _ROOT / "history.json"))
 
 
 def save(messages, path=_PATH):

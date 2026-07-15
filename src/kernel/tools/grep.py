@@ -42,7 +42,7 @@ def grep(pattern, path=".", glob=None, output_mode="content", case_insensitive=F
                     elif output_mode == "count":
                         counts[fp] = counts.get(fp, 0) + 1
         except OSError:
-            pass  # ponytail: 读不了就跳过，不记录每文件错误——模型不需要权限清单
+            pass  # 读不了就跳过，不记录每文件错误——模型不需要权限清单
 
     if os.path.isfile(path):
         scan(path)
