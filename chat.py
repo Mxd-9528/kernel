@@ -1,11 +1,9 @@
 
-import shutil
 import signal
 import threading
 
 import commands
 import sys
-from display import console
 from llm import default_model
 from agent import agent
 from history import load
@@ -19,34 +17,33 @@ def _handle_sigint(signum, frame):
         _current_stop.set()
 
 
-def chat(model=None, *, observer=None):
+def chat(messages=None, *, model=None, observer=None, input_source=None):
     """连续对话——你一句、它干完、回你、再等你下一句。历史跨轮保留、跨启动接续。
 
     输入 exit 退出。斜杠命令：/new /model /help。
     按 Ctrl+C 停止：当前轮走完后回到输入，不继续下轮。
     model: None 用默认（models.json 第一个）。
     observer: None 时静默（无显示、无存盘、无压缩）。
+    input_source: None 时用终端 input()；否则调用 input_source() 获取下一行输入。
     """
     global _current_stop
     signal.signal(signal.SIGINT, _handle_sigint)
 
     model = model or default_model()
-    messages = load()  # 自动接续上次对话；无历史则 None
+    if messages is None:
+        messages = load()
     if messages is None:
         from system import build_system
         messages = [{"role": "system", "content": build_system()}]
+
+    _get_input = input_source or (lambda: input("> "))
+
     while True:
         try:
-            you = input("> ")
-            # 清除 input() 回显行（多行时 \x1b[1A 不够，需按行数清）
-            lines = (len(you) + 2 + shutil.get_terminal_size().columns - 1) // shutil.get_terminal_size().columns
-            for _ in range(lines):
-                sys.stdout.write("\x1b[1A\x1b[K")
-            sys.stdout.flush()
-            console.print(f"> {you}", style="on grey30")
+            you = _get_input()
         except (EOFError, KeyboardInterrupt):
             break
-        if you == "exit":
+        if you is None or you == "exit":
             break
 
         # 斜杠命令：直接调用
