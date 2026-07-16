@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react"
+
+import { useState, type FormEvent, useRef, useEffect } from "react"
 
 export interface InputAreaProps {
   onSend: (text: string) => void
@@ -9,6 +10,15 @@ export interface InputAreaProps {
 
 export function InputArea({ onSend, onStop, disabled, streaming }: InputAreaProps) {
   const [text, setText] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // 自动调整高度
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto"
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px"
+    }
+  }, [text])
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -21,19 +31,35 @@ export function InputArea({ onSend, onStop, disabled, streaming }: InputAreaProp
     setText("")
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit(e)
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} style={{
       display: "flex", flex: 1, padding: "8px 12px", gap: 8,
+      alignItems: "flex-end",
     }}>
-      <input
+      <textarea
+        ref={textareaRef}
+        className="input-area"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder={streaming ? "生成中…" : "输入消息..."}
         autoFocus
         disabled={streaming}
+        rows={1}
         style={{
-          flex: 1, padding: "8px 12px", borderRadius: 6,
-          border: "1px solid #ddd", fontSize: 14, outline: "none",
+          flex: 1, padding: "6px 10px", borderRadius: 6, fontSize: 14, outline: "none",
+          resize: "none", maxHeight: 200, height: "auto",
+          fontFamily: "inherit", lineHeight: 1.4,
+          border: "1px solid var(--color-hairline-strong)",
+          background: "var(--color-surface)",
+          color: "var(--color-ink)",
         }}
       />
       <button type="submit" disabled={disabled && !streaming} style={{
@@ -41,8 +67,8 @@ export function InputArea({ onSend, onStop, disabled, streaming }: InputAreaProp
         padding: streaming ? 6 : "8px 16px",
         borderRadius: streaming ? 4 : 6,
         border: "none",
-        background: streaming ? "var(--color-muted)" : "#1976d2",
-        color: streaming ? "var(--color-canvas)" : "#fff",
+        background: streaming ? "var(--color-muted)" : "var(--color-primary)",
+        color: streaming ? "var(--color-canvas)" : "var(--color-on-primary)",
         cursor: "pointer",
         minWidth: streaming ? 36 : 56,
         height: streaming ? 36 : undefined,

@@ -237,3 +237,49 @@ body {
   font-size: 16px;
   line-height: 1;
 }
+
+/* 输入框 */
+.input-area:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px rgba(245, 78, 0, 0.15);
+}
+
+[data-theme="dark"] .input-area:focus {
+  box-shadow: 0 0 0 2px rgba(255, 107, 43, 0.2);
+}
+
+/* Edit 左右分栏对比 */
+.edit-diff-split {
+  display: flex;
+  gap: 4px;
+  padding: 0 10px 10px 10px;
+}
+
+.edit-diff-old,
+.edit-diff-new {
+  flex: 1;
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 只给变化的行加浅底纹 */
+.edit-line-del {
+  background: rgba(244, 67, 54, 0.08);
+  margin: 0 -10px;
+  padding: 0 10px;
+}
+
+.edit-line-add {
+  background: rgba(76, 175, 80, 0.08);
+  margin: 0 -10px;
+  padding: 0 10px;
+}
+
+[data-theme="dark"] .edit-line-del {
+  background: rgba(244, 67, 54, 0.12);
+}
+
+[data-theme="dark"] .edit-line-add {
+  background: rgba(76, 175, 80, 0.12);
+}

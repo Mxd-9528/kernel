@@ -2,42 +2,12 @@
 
 // ── 服务端消息（JSON-RPC 2.0 Notification） ──────────────────────
 
-export interface ThinkingMessage {
-  jsonrpc: "2.0"
-  method: "window/thinking"
-  params: { token: string }
-}
-
-export interface DeltaMessage {
-  jsonrpc: "2.0"
-  method: "window/delta"
-  params: { token: string }
-}
-
-export interface FlushMessage {
-  jsonrpc: "2.0"
-  method: "window/flush"
-  params: Record<string, never>
-}
-
-export interface DisplayMessage {
-  jsonrpc: "2.0"
-  method: "window/display"
-  params: { content: string }
-}
-
-export interface UserMessage {
-  jsonrpc: "2.0"
-  method: "window/user"
-  params: { content: string }
-}
-
 export type ServerMessage =
-  | ThinkingMessage
-  | DeltaMessage
-  | FlushMessage
-  | DisplayMessage
-  | UserMessage
+  | { jsonrpc: "2.0"; method: "window/thinking"; params: { token: string } }
+  | { jsonrpc: "2.0"; method: "window/delta"; params: { token: string } }
+  | { jsonrpc: "2.0"; method: "window/flush"; params: Record<string, never> }
+  | { jsonrpc: "2.0"; method: "window/display"; params: { content: string } }
+  | { jsonrpc: "2.0"; method: "window/user"; params: { content: string } }
 
 // ── 渲染用消息 ────────────────────────────────────────
 

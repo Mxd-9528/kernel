@@ -1,8 +1,10 @@
+
 import { useState } from "react"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { RenderedMessage } from "../types"
 import { CodeBlock } from "./CodeBlock"
+import { EditDiffView, parseEditCall } from "./EditDiffView"
 
 export interface MessageBubbleProps {
   message: RenderedMessage
@@ -47,6 +49,14 @@ const mdComponents = {
     const className = codeEl?.props?.className || ""
     const language = className.replace("language-", "")
     const code = codeEl?.props?.children?.toString() || ""
+
+    // 检测是否是 edit 调用
+    const editDiff = parseEditCall(code)
+    if (editDiff) {
+      return <EditDiffView code={code} diff={editDiff} />
+    }
+
+    // 普通代码块
     const lines = code ? code.split("\n") : []
     if (lines.length <= 1) {
       return <pre className="code-block code-block-inline"><code>{code}</code></pre>
