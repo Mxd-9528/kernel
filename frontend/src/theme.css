@@ -145,6 +145,7 @@ body {
   border: none;
   cursor: pointer;
   padding: 1px 10px;
+  margin-bottom: 2px;
 }
 .bubble-system {
   background: var(--color-system);
@@ -152,8 +153,8 @@ body {
   color: var(--color-muted);
 }
 .thinking-header {
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 10px;
+  line-height: 1.1;
   color: var(--color-muted-soft);
 }
 .bubble-text {
