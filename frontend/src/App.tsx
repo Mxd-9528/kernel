@@ -12,14 +12,20 @@ const WS_URL = "ws://localhost:8765/ws"
 function App() {
   const { status, messages, streaming, send, interrupt } = useWebSocket(WS_URL)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    const el = messagesRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100
+    if (atBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
   }, [messages])
 
   return (
     <div className="container">
-      <div className="messages">
+      <div className="messages" ref={messagesRef}>
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
