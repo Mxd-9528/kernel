@@ -3,8 +3,8 @@
 
 调用者（agent 循环）调用 observer 方法后立即返回，不感知网络边界。
 chat() 通过 input_source=lambda: observer.input_queue.get() 读取用户输入。
-浏览器发送 {"type":"interrupt"} 时，server 设置 interrupt_event，
-chat() 的 daemon 线程检测到后桥接 stop_event 终止 agent 循环。
+浏览器发送 {"jsonrpc":"2.0","method":"chat/interrupt"} 时，server 设置 interrupt_event，
+agent 循环每轮检查此事件终止生成。
 """
 from ..observer import BaseObserver
 from queue import Queue

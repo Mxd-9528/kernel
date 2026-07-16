@@ -10,7 +10,7 @@
 用户输入 → agent() → LLM 流式回复 → 提取 <EXEC> 块 → 执行 → 反馈 → LLM → ... → 纯文本回复（终止）
 ```
 
-agent() 每轮最多 20 次迭代（`max_iters` 参数）。Ctrl+C 通过 stop_event 优雅中断。
+agent() 每轮最多 20 次迭代（`max_iters` 参数）。Ctrl+C 和 WebSocket 中断通过同一个 `interrupt_event`（`threading.Event`）优雅中断。
 
 ```
 while True:                     # 决策-执行-观察 循环
@@ -25,13 +25,16 @@ while True:                     # 决策-执行-观察 循环
 
 ## Observer 协议
 
-agent 循环通过 `observer` 参数在 6 个关键节点通知外部。main.py 通过 `CompositeObserver([spinner, compact_observer, history_observer])` 显式组合，`--web` 模式额外加入 `WebSocketObserver`。agent() 默认 `BaseObserver()`（静默），调用者按需注入。
+agent 循环通过 `observer` 参数在 7 个关键节点通知外部。main.py 通过 `CompositeObserver([spinner, compact_observer, history_observer])` 显式组合，`--web` 模式额外加入 `WebSocketObserver`。agent() 默认 `BaseObserver()`（静默），调用者按需注入。
+
+WebSocket 出站消息使用 JSON-RPC 2.0 Notification 格式（`window/thinking`、`window/delta`、`window/flush`、`window/display`、`window/user`），入站使用 `chat/send` 和 `chat/interrupt`。
 
 | 方法 | 触发时机 | 消费者 |
 |------|----------|--------|
 | `on_thinking(token)` | 收到 reasoning token | display 更新思考中 spinner |
 | `on_delta(token)` | 收到正文 token | display 更新回复中 spinner |
 | `on_flush()` | 流结束 | display 一次性渲染累积正文 |
+| `on_user(text)` | 浏览器发送用户输入 | server 写入消息历史 |
 | `before_send(messages, model)` | 发 LLM 请求前 | compact 压缩上下文 |
 | `save(messages)` | 消息列表变更 | history 存盘 |
 | `display_msg(content)` | 显示命令结果等非流式消息 | display 输出 |
