@@ -128,6 +128,7 @@ def serve(observer, host="localhost", port=8765):
                     continue
                 if msg.get("type") == "input" and "text" in msg:
                     observer.input_queue.put(msg["text"])
+                    observer.on_user(msg["text"])
         finally:
             connections.discard(websocket)
 

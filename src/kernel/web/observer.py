@@ -32,5 +32,8 @@ class WebSocketObserver(BaseObserver):
     def on_flush(self) -> None:
         self.messages.put({"type": "flush"})
 
+    def on_user(self, text: str) -> None:
+        self.messages.put({"type": "user", "content": text})
+
     def display_msg(self, content: str) -> None:
         self.messages.put({"type": "display", "content": content})

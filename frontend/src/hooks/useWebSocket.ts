@@ -4,11 +4,12 @@
  * 隐藏：重连、JSON 解析、消息缓冲、连接状态机。
  * 暴露：{ status, messages, send } 三个接口。
  *
- * 对应后端 observer.py 的 4 种消息类型：
+ * 对应后端 observer.py 的 5 种消息类型：
  *   thinking → 模型思考 token
  *   delta    → 模型输出 token
  *   flush    → 一轮输出结束，渲染 markdown
  *   display  → 系统消息（命令反馈等）
+ *   user     → 用户输入回显（一等事件，刷新后 history 回放不丢失）
  */
 
 import { useState, useEffect, useRef, useCallback } from "react"
@@ -84,19 +85,14 @@ export function reduceServerMessage(
           { id: crypto.randomUUID(), role: "system", content: msg.content },
         ],
       }
-  }
-}
-
-export function addUserMessage(
-  state: BufferState,
-  text: string,
-): BufferState {
-  return {
-    ...state,
-    messages: [
-      ...state.messages,
-      { id: crypto.randomUUID(), role: "user", content: text },
-    ],
+    case "user":
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          { id: crypto.randomUUID(), role: "user", content: msg.content },
+        ],
+      }
   }
 }
 
@@ -142,7 +138,6 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
   const send = useCallback(
     (text: string) => {
-      setBufferState((prev) => addUserMessage(prev, text))
       wsRef.current?.send(JSON.stringify({ type: "input", text }))
     },
     [],

@@ -21,11 +21,17 @@ export interface DisplayMessage {
   content: string
 }
 
+export interface UserMessage {
+  type: "user"
+  content: string
+}
+
 export type ServerMessage =
   | ThinkingMessage
   | DeltaMessage
   | FlushMessage
   | DisplayMessage
+  | UserMessage
 
 // ── 渲染用消息 ────────────────────────────────────────
 

@@ -7,10 +7,11 @@ from typing import Protocol
 
 
 class Observer(Protocol):
-    """观察者协议：agent 循环通过这 6 个方法通知外部。"""
+    """观察者协议：agent 循环通过这 7 个方法通知外部。"""
     def on_thinking(self, token: str) -> None: ...
     def on_delta(self, token: str) -> None: ...
     def on_flush(self) -> None: ...
+    def on_user(self, text: str) -> None: ...
     def before_send(self, messages: list, model: str) -> None: ...
     def save(self, messages: list) -> None: ...
     def display_msg(self, content: str) -> None: ...
@@ -34,6 +35,10 @@ class CompositeObserver:
         for o in self._observers:
             o.on_flush()
 
+    def on_user(self, text):
+        for o in self._observers:
+            o.on_user(text)
+
     def before_send(self, messages, model):
         for o in self._observers:
             o.before_send(messages, model)
@@ -55,6 +60,7 @@ class BaseObserver:
     def on_thinking(self, token): pass
     def on_delta(self, token): pass
     def on_flush(self): pass
+    def on_user(self, text): pass
     def before_send(self, messages, model): pass
     def save(self, messages): pass
     def display_msg(self, content): pass
