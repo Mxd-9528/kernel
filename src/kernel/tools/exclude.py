@@ -7,8 +7,8 @@
 _EXCLUDE = frozenset({
     ".git", ".hg", ".svn", ".venv", "venv", "env", "node_modules",
     "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox",
-    "dist", "build", ".eggs",
+    "dist", "build", ".eggs", ".impeccable",
 })
 
 # 文件级噪声：编译产物、agent 自身对话历史
-_EXCLUDE_FILES = ("*.pyc", "*.pyo", "history.json")
+_EXCLUDE_FILES = ("*.pyc", "*.pyo", "history.json", "models.json", "package-lock.json")

@@ -17,7 +17,8 @@ import re
 import subprocess
 from collections import Counter
 
-from .exclude import _EXCLUDE
+from .exclude import _EXCLUDE, _EXCLUDE_FILES
+import fnmatch
 
 # 单一事实源：ctags --list-maps 未覆盖的扩展名映射。
 # 同时用于 _source_exts() 和 ctags 命令行 --map-* 参数。
@@ -26,7 +27,7 @@ _CTAGS_MAP_OVERRIDES = {
 }
 
 # survey 专属噪声目录：不参与项目架构测绘
-_SURVEY_EXCLUDE = frozenset({".claude"})
+_SURVEY_EXCLUDE = frozenset({".claude", "static", ".impeccable"})
 
 _cache = {}
 _cache_fp = None
@@ -95,6 +96,8 @@ def _list_files(path):
     for root, dirs, names in os.walk(path):
         dirs[:] = [d for d in dirs if d not in all_exclude]
         for f in names:
+            if any(fnmatch.fnmatch(f, pat) for pat in _EXCLUDE_FILES):
+                continue
             if os.path.splitext(f)[1].lower() in exts:
                 files.append(os.path.join(root, f))
     return files
