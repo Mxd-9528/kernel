@@ -39,26 +39,43 @@ export function EditDiffView({ code, diff }: Props) {
   const preview = lines.slice(0, PREVIEW_LINES).join("\n")
   const hasMore = lines.length > PREVIEW_LINES
 
-  // 简单逐行对比，标记变化行
+  // LCS 算法：计算最长公共子序列，避免插入/删除导致的错位
   const oldLines = diff.oldCode.split("\n")
   const newLines = diff.newCode.split("\n")
-  const maxLen = Math.max(oldLines.length, newLines.length)
 
+  // 构建 LCS 表
+  const m = oldLines.length
+  const n = newLines.length
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0))
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (oldLines[i - 1] === newLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1])
+      }
+    }
+  }
+
+  // 回溯 LCS，生成对齐后的左右结果
   const oldResult: { line: string; changed: boolean }[] = []
   const newResult: { line: string; changed: boolean }[] = []
-
-  for (let i = 0; i < maxLen; i++) {
-    const oldLine = oldLines[i] ?? ""
-    const newLine = newLines[i] ?? ""
-
-    if (i < oldLines.length && i < newLines.length) {
-      const changed = oldLine !== newLine
-      if (i < oldLines.length) oldResult.push({ line: oldLine, changed })
-      if (i < newLines.length) newResult.push({ line: newLine, changed })
-    } else if (i < oldLines.length) {
-      oldResult.push({ line: oldLine, changed: true })
+  let i = m, j = n
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      oldResult.unshift({ line: oldLines[i - 1], changed: false })
+      newResult.unshift({ line: newLines[j - 1], changed: false })
+      i--; j--
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      // 新增行：右边有，左边补空行
+      oldResult.unshift({ line: "", changed: true })
+      newResult.unshift({ line: newLines[j - 1], changed: true })
+      j--
     } else {
-      newResult.push({ line: newLine, changed: true })
+      // 删除行：左边有，右边补空行
+      oldResult.unshift({ line: oldLines[i - 1], changed: true })
+      newResult.unshift({ line: "", changed: true })
+      i--
     }
   }
 
