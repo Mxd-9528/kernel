@@ -37,12 +37,24 @@ export function InputArea({ onSend, onStop, disabled, streaming }: InputAreaProp
         }}
       />
       <button type="submit" disabled={disabled && !streaming} style={{
-        padding: "8px 16px", borderRadius: 6, border: "none",
-        background: streaming ? "#e53935" : "#1976d2",
-        color: "#fff", fontSize: 14, cursor: "pointer",
-        minWidth: 56,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: streaming ? 6 : "8px 16px",
+        borderRadius: streaming ? 4 : 6,
+        border: "none",
+        background: streaming ? "var(--color-muted)" : "#1976d2",
+        color: streaming ? "var(--color-canvas)" : "#fff",
+        cursor: "pointer",
+        minWidth: streaming ? 36 : 56,
+        height: streaming ? 36 : undefined,
+        transition: "background 0.15s, border-radius 0.15s",
       }}>
-        {streaming ? "■" : "发送"}
+        {streaming ? (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="3" y="3" width="10" height="10" rx="2" />
+          </svg>
+        ) : (
+          "发送"
+        )}
       </button>
     </form>
   )

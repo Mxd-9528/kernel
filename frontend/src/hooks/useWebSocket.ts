@@ -30,15 +30,15 @@ export function reduceServerMessage(
   state: BufferState,
   msg: ServerMessage,
 ): BufferState {
-  switch (msg.type) {
-    case "thinking":
+  switch (msg.method) {
+    case "window/thinking":
       return {
         ...state,
-        buffer: state.buffer + msg.token,
+        buffer: state.buffer + msg.params.token,
         bufferType: "thinking",
         tokenCount: state.tokenCount + 1,
       }
-    case "delta":
+    case "window/delta":
       // 从 thinking 切换到 delta：先产出 thinking 消息
       if (state.bufferType === "thinking" && state.buffer) {
         return {
@@ -50,18 +50,18 @@ export function reduceServerMessage(
               content: state.buffer,
             },
           ],
-          buffer: msg.token,
+          buffer: msg.params.token,
           bufferType: "delta",
           tokenCount: 1,
         }
       }
       return {
         ...state,
-        buffer: state.buffer + msg.token,
+        buffer: state.buffer + msg.params.token,
         bufferType: "delta",
         tokenCount: state.tokenCount + 1,
       }
-    case "flush": {
+    case "window/flush": {
       if (!state.buffer) return state
       return {
         messages: [
@@ -77,20 +77,20 @@ export function reduceServerMessage(
         tokenCount: 0,
       }
     }
-    case "display":
+    case "window/display":
       return {
         ...state,
         messages: [
           ...state.messages,
-          { id: crypto.randomUUID(), role: "system", content: msg.content },
+          { id: crypto.randomUUID(), role: "system", content: msg.params.content },
         ],
       }
-    case "user":
+    case "window/user":
       return {
         ...state,
         messages: [
           ...state.messages,
-          { id: crypto.randomUUID(), role: "user", content: msg.content },
+          { id: crypto.randomUUID(), role: "user", content: msg.params.content },
         ],
       }
   }
@@ -139,14 +139,14 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
   const send = useCallback(
     (text: string) => {
-      wsRef.current?.send(JSON.stringify({ type: "input", text }))
+      wsRef.current?.send(JSON.stringify({ jsonrpc: "2.0", method: "chat/send", params: { text } }))
     },
     [],
   )
 
   const interrupt = useCallback(
     () => {
-      wsRef.current?.send(JSON.stringify({ type: "interrupt" }))
+      wsRef.current?.send(JSON.stringify({ jsonrpc: "2.0", method: "chat/interrupt", params: {} }))
     },
     [],
   )

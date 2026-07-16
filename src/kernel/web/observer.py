@@ -29,16 +29,21 @@ class WebSocketObserver(BaseObserver):
         self.interrupt_event = Event()
 
     def on_thinking(self, token: str) -> None:
-        self.messages.put({"type": "thinking", "token": token})
+        self.messages.put({"jsonrpc": "2.0", "method": "window/thinking",
+                          "params": {"token": token}})
 
     def on_delta(self, token: str) -> None:
-        self.messages.put({"type": "delta", "token": token})
+        self.messages.put({"jsonrpc": "2.0", "method": "window/delta",
+                          "params": {"token": token}})
 
     def on_flush(self) -> None:
-        self.messages.put({"type": "flush"})
+        self.messages.put({"jsonrpc": "2.0", "method": "window/flush",
+                          "params": {}})
 
     def on_user(self, text: str) -> None:
-        self.messages.put({"type": "user", "content": text})
+        self.messages.put({"jsonrpc": "2.0", "method": "window/user",
+                          "params": {"content": text}})
 
     def display_msg(self, content: str) -> None:
-        self.messages.put({"type": "display", "content": content})
+        self.messages.put({"jsonrpc": "2.0", "method": "window/display",
+                          "params": {"content": content}})

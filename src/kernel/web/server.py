@@ -126,10 +126,13 @@ def serve(observer, host="localhost", port=8765):
                     msg = json.loads(raw)
                 except (json.JSONDecodeError, TypeError):
                     continue
-                if msg.get("type") == "input" and "text" in msg:
-                    observer.input_queue.put(msg["text"])
-                    observer.on_user(msg["text"])
-                elif msg.get("type") == "interrupt":
+                if msg.get("method") == "chat/send":
+                    params = msg.get("params", {})
+                    text = params.get("text", "")
+                    if text:
+                        observer.input_queue.put(text)
+                        observer.on_user(text)
+                elif msg.get("method") == "chat/interrupt":
                     observer.interrupt_event.set()
         finally:
             connections.discard(websocket)
