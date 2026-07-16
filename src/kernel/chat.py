@@ -16,7 +16,8 @@ def _handle_sigint(signum, frame):
         _current_stop.set()
 
 
-def chat(messages=None, *, model=None, observer=None, input_source=None):
+def chat(messages=None, *, model=None, observer=None, input_source=None,
+         interrupt_event=None):
     """连续对话——你一句、它干完、回你、再等你下一句。历史跨轮保留、跨启动接续。
 
     输入 exit 退出。斜杠命令：/new /model /help。
@@ -24,6 +25,8 @@ def chat(messages=None, *, model=None, observer=None, input_source=None):
     model: None 用默认（models.json 第一个）。
     observer: None 时静默（无显示、无存盘、无压缩）。
     input_source: None 时用终端 input()；否则调用 input_source() 获取下一行输入。
+    interrupt_event: None 或 threading.Event。Web 模式下，server 收到 interrupt
+                    消息后设置此 Event；daemon 线程检测到后桥接到 stop_event。
     """
     global _current_stop
     signal.signal(signal.SIGINT, _handle_sigint)
@@ -56,7 +59,19 @@ def chat(messages=None, *, model=None, observer=None, input_source=None):
         # 自由文本：进入 agent
         stop_event = threading.Event()
         _current_stop = stop_event
-        messages = agent(you, messages=messages, model=model, stop_event=stop_event, observer=observer)
+
+        # Web 中断：daemon 线程监听 interrupt_event → 桥接 stop_event
+        interrupt_thread = None
+        if interrupt_event is not None:
+            interrupt_event.clear()
+            interrupt_thread = threading.Thread(
+                target=lambda: (interrupt_event.wait(), stop_event.set()),
+                daemon=True,
+            )
+            interrupt_thread.start()
+
+        messages = agent(you, messages=messages, model=model,
+                         stop_event=stop_event, observer=observer)
         _current_stop = None
         if stop_event.is_set():
             print("\n（已停止）")

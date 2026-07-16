@@ -20,22 +20,28 @@ class Response:
         return runtime.extract_blocks(self.content)
 
 
-def stream_model(messages, model=None, *, observer=None):
-    """流式调用 LLM，逐 token 通知 observer，返回 Response。"""
+def stream_model(messages, model=None, *, observer=None, stop_event=None):
+    """流式调用 LLM，逐 token 通知 observer，返回 Response。
+    
+    stop_event: threading.Event | None。若被设置，token 循环立即终止，
+                on_flush() 仍被调用，返回已累积内容。
+    """
     if observer is None:
         observer = BaseObserver()
     content = ""
     try:
         for kind, token in llm.stream_chat(messages, model):
+            if stop_event and stop_event.is_set():
+                break
             if kind == "thinking":
                 observer.on_thinking(token)
             else:
                 content += token
                 observer.on_delta(token)
-        observer.on_flush()
     except Exception as e:
-        observer.on_flush()
         content = f"LLM 请求失败: {e}"
+    finally:
+        observer.on_flush()
     return Response(content)
 
 
@@ -63,7 +69,7 @@ def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_
 
         observer.before_send(messages, model)          # → compact 压缩
 
-        response = stream_model(messages, model, observer=observer)  # → display 流式渲染
+        response = stream_model(messages, model, observer=observer, stop_event=stop_event)  # → display 流式渲染
         messages.append({"role": "assistant", "content": response.content})
         observer.save(messages)                         # → history 存盘
 

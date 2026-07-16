@@ -129,6 +129,8 @@ def serve(observer, host="localhost", port=8765):
                 if msg.get("type") == "input" and "text" in msg:
                     observer.input_queue.put(msg["text"])
                     observer.on_user(msg["text"])
+                elif msg.get("type") == "interrupt":
+                    observer.interrupt_event.set()
         finally:
             connections.discard(websocket)
 

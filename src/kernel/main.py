@@ -38,7 +38,8 @@ def main():
             _os.startfile(url)
 
         chat(model=model, observer=web_observer,
-             input_source=lambda: ws_obs.input_queue.get())
+             input_source=lambda: ws_obs.input_queue.get(),
+             interrupt_event=ws_obs.interrupt_event)
     else:
         chat(model=model, observer=observer)
 

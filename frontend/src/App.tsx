@@ -10,7 +10,7 @@ import "./App.css"
 const WS_URL = "ws://localhost:8765/ws"
 
 function App() {
-  const { status, messages, streaming, send } = useWebSocket(WS_URL)
+  const { status, messages, streaming, send, interrupt } = useWebSocket(WS_URL)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -29,7 +29,12 @@ function App() {
 
       <div className="bottom-bar">
         <ThemeToggle />
-        <InputArea onSend={send} disabled={status !== "connected"} />
+        <InputArea
+          onSend={send}
+          onStop={interrupt}
+          disabled={status !== "connected"}
+          streaming={streaming !== null}
+        />
       </div>
     </div>
   )

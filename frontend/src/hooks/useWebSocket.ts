@@ -108,6 +108,7 @@ export interface UseWebSocketReturn {
   messages: RenderedMessage[]
   streaming: StreamingState | null
   send: (text: string) => void
+  interrupt: () => void
 }
 
 export function useWebSocket(url: string): UseWebSocketReturn {
@@ -143,5 +144,12 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     [],
   )
 
-  return { status, messages: bufferState.messages, streaming: bufferState.bufferType ? { phase: bufferState.bufferType, tokenCount: bufferState.tokenCount } : null, send }
+  const interrupt = useCallback(
+    () => {
+      wsRef.current?.send(JSON.stringify({ type: "interrupt" }))
+    },
+    [],
+  )
+
+  return { status, messages: bufferState.messages, streaming: bufferState.bufferType ? { phase: bufferState.bufferType, tokenCount: bufferState.tokenCount } : null, send, interrupt }
 }
