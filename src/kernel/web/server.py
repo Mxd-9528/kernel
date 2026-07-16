@@ -93,12 +93,21 @@ def serve(observer, host="localhost", port=8765):
     前置条件：
       - observer.messages 是 queue.Queue 实例
       - observer.input_queue 是 queue.Queue 实例
-      - static/ 目录存在于模块同目录
+      - static/index.html 存在（已构建前端）
     后置条件：/ws 接受 WebSocket 连接，/ 返回 React 前端。
+    
+    违反前置条件：
+      - 缺少 static/index.html 时 raise RuntimeError，提示 cd frontend && npm run build
     """
     from queue import Queue
     assert isinstance(observer.messages, Queue), "observer.messages 必须是 queue.Queue"
     assert isinstance(observer.input_queue, Queue), "observer.input_queue 必须是 queue.Queue"
+
+    if not (_STATIC / "index.html").is_file():
+        raise RuntimeError(
+            f"静态文件不存在：{_STATIC / 'index.html'}\n"
+            f"请先构建前端：cd frontend; npm run build"
+        )
 
     connections = set()
     history = []

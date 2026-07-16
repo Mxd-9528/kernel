@@ -5,8 +5,8 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-# 导入时缓存，因为 agent.py 子代理会 os.chdir(tmpdir)
-_ROOT = Path.cwd().resolve()
+# 用 __file__ 推导项目根，避免 cwd() 在子目录运行或 os.chdir() 后飘移
+_ROOT = Path(__file__).resolve().parent.parent.parent
 
 _ENV_LOADED = False
 

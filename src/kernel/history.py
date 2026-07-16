@@ -8,8 +8,8 @@ import os
 from pathlib import Path
 
 
-# 导入时缓存，避免 os.chdir() 后路径漂移
-_ROOT = Path.cwd().resolve()
+# 用 __file__ 推导项目根，避免 cwd() 在子目录运行或 os.chdir() 后飘移
+_ROOT = Path(__file__).resolve().parent.parent.parent
 _PATH = Path(os.environ.get("HISTORY_PATH", _ROOT / "history.json"))
 
 

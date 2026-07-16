@@ -3,7 +3,7 @@
 # 安装所有依赖
 install:
 	pip install -e .
-	cd frontend && npm install
+	cd frontend && npm install && npm run build
 
 # 跑全部测试
 test: test-py test-fe
@@ -17,7 +17,7 @@ test-fe:
 # 开发模式（热更新）
 dev:
 	@echo "终端1: ma --web"
-	@echo "终端2: cd frontend && npm run dev"
+	@echo "终端2: cd frontend; npm run dev"
 
 # 前端构建
 build:
