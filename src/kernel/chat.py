@@ -1,11 +1,14 @@
+from __future__ import annotations
 
 import signal
 import threading
+from typing import Callable
 
 from . import commands
 from .llm import default_model
 from .agent import agent
 from .history import load
+from .observer import Observer
 
 # signal handler 通过此 cell 访问当前轮次的 interrupt_event
 _current_interrupt = None
@@ -16,8 +19,8 @@ def _handle_sigint(signum, frame):
         _current_interrupt.set()
 
 
-def chat(messages=None, *, model=None, observer=None, input_source=None,
-         interrupt_event=None):
+def chat(messages: list[dict] | None = None, *, model: str | None = None, observer: Observer | None = None, input_source: Callable[[], str | None] | None = None,
+         interrupt_event: threading.Event | None = None) -> None:
     """连续对话——你一句、它干完、回你、再等你下一句。历史跨轮保留、跨启动接续。
 
     输入 exit 退出。斜杠命令：/new /model /help。

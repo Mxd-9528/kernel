@@ -8,14 +8,17 @@
 
 接口：serve(observer, host, port) —— 阻塞当前线程。
 """
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path
 from queue import Empty
 
-from websockets.asyncio.server import Response, serve as ws_serve
+from websockets.asyncio.server import serve as ws_serve
+from websockets.datastructures import Headers
 from websockets.exceptions import ConnectionClosed
-from websockets.http11 import Headers
+from websockets.http11 import Response
 
 _STATIC = Path(__file__).parent / "static"
 
@@ -30,7 +33,7 @@ _MIME = {
 }
 
 
-def _serve_static(path: str):
+def _serve_static(path: str) -> tuple[bytes, str] | None:
     """返回静态文件内容 + MIME type，不存在返回 None。"""
     # 安全：拒绝路径穿越
     safe = Path(_STATIC, path.lstrip("/")).resolve()
@@ -41,7 +44,7 @@ def _serve_static(path: str):
     return safe.read_bytes(), _MIME.get(safe.suffix, "application/octet-stream")
 
 
-async def _broadcast(observer, connections, history):
+async def _broadcast(observer, connections: set, history: list[str]) -> None:
     """循环消费 observer.messages 队列，广播给所有已连接客户端。"""
     while True:
         try:
@@ -87,7 +90,7 @@ async def _process_request(connection, request):
     return Response(200, "OK", Headers({"Content-Type": mime}), content)
 
 
-def serve(observer, host="localhost", port=8765):
+def serve(observer, host: str = "localhost", port: int = 8765) -> None:
     """启动 WebSocket + HTTP 服务，阻塞当前线程。
 
     前置条件：

@@ -4,10 +4,12 @@
 写空是合法操作；要看变更单独调 diff；二进制极罕见时 open(wb) 一行。
 """
 
+from __future__ import annotations
+
 import os
 
 
-def write(file_path, content=""):
+def write(file_path: str, content: str = "") -> int:
     """写文件（覆盖已有），自动创建父目录。返回写入的字节数。
 
     失败 raise 原生异常（OSError / PermissionError 等）。

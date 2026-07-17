@@ -13,11 +13,10 @@ def test_bg_start():
             time.sleep(0.05)
             results.append(i)
 
-    t = bg_start(worker)
+    f = bg_start(worker)
 
-    t.join(timeout=2)
-    assert not t.is_alive(), "worker 应已完成"
+    f.result(timeout=2)
+    assert f.done(), "worker 应已完成"
     assert results == [0, 1, 2]
 
-    assert t.daemon is True
     print("bg_start ok")

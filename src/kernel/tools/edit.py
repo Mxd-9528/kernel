@@ -5,12 +5,14 @@
 失败通过 raise 传递（FileNotFoundError / ValueError）。
 """
 
+from __future__ import annotations
+
 import difflib
 
 _CURLY = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'", "„": '"'})
 
 
-def _diff(old, new, max_lines=30):
+def _diff(old: str, new: str, max_lines: int = 30) -> str:
     lines = [
         ln.rstrip()
         for ln in difflib.unified_diff(old.splitlines(), new.splitlines(), n=0, lineterm="")
@@ -22,7 +24,7 @@ def _diff(old, new, max_lines=30):
     return out
 
 
-def edit(file_path, old_string, new_string, replace_all=False):
+def edit(file_path: str, old_string: str, new_string: str, replace_all: bool = False) -> str:
     """精确替换文件中的文本，old_string 须唯一匹配（多处需 replace_all=True）。返回 "file:line\\n<diff>" 字符串。
 
     old_string 用文件的纯文本内容，不要带 read 显示的行号前缀（`数字+tab`）——edit 在磁盘原文上匹配，行号是 read 加的。

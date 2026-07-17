@@ -6,6 +6,8 @@
 无匹配返回空列表（不 raise）。
 """
 
+from __future__ import annotations
+
 import fnmatch
 import glob as _glob
 import os
@@ -13,19 +15,19 @@ import os
 from .exclude import _EXCLUDE, _EXCLUDE_FILES  # 单一事实源
 
 
-def _norm(path):
+def _norm(path: str) -> str:
     p = os.path.normpath(path).replace("\\", "/")
     return p[2:] if p.startswith("./") else p
 
 
-def _is_noise(path):
+def _is_noise(path: str) -> bool:
     parts = path.replace("\\", "/").rstrip("/").split("/")
     if any(seg in _EXCLUDE for seg in parts):
         return True
     return any(fnmatch.fnmatch(parts[-1], pat) for pat in _EXCLUDE_FILES)
 
 
-def glob(pattern, path="."):
+def glob(pattern: str, path: str = ".") -> list[str]:
     """递归查找匹配 pattern 的文件，按修改时间倒序返回路径列表。path 指定搜索根目录。"""
     full = os.path.join(path, pattern if "**" in pattern else os.path.join("**", pattern))
     hits = [p for p in dict.fromkeys(_glob.glob(full, recursive=True)) if not _is_noise(p)]

@@ -4,11 +4,13 @@
 返回格式化的整表字符串；失败通过 raise 传递（ValueError / TypeError）。
 """
 
+from __future__ import annotations
+
 _VALID = {"pending", "in_progress", "completed"}
 _MARK = {"pending": "☐", "in_progress": "▸", "completed": "✔"}
 
 
-def plan(items):
+def plan(items: list[dict]) -> str:
     """维护跨轮 TODO 列表。整表覆盖，每次给完整列表。返回格式化的整表字符串。
 
     调用格式：

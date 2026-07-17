@@ -2,11 +2,11 @@
 
 
 def test_agent_tool():
-    """tools.agent 后台执行，通过 .join() 获取结果。"""
+    """tools.agent 后台执行，通过 .result() 获取结果。"""
     from kernel.tools.agent import agent as agent_tool
 
-    t = agent_tool("回复 hello，只回复这一个词，不要多余内容")
-    result = t.join(timeout=30)
+    f = agent_tool("回复 hello，只回复这一个词，不要多余内容")
+    result = f.result(timeout=30)
     assert isinstance(result, str)
     assert "hello" in result.lower()
     print("agent_tool ok")

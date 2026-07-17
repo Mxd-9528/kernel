@@ -1,8 +1,11 @@
 """LLM 调用工具：读配置、发请求、取回复。"""
+from __future__ import annotations
+
 import json
 import os
 import urllib.request
 import urllib.error
+from collections.abc import Generator
 from pathlib import Path
 
 # 用 __file__ 推导项目根，避免 cwd() 在子目录运行或 os.chdir() 后飘移
@@ -11,7 +14,7 @@ _ROOT = Path(__file__).resolve().parent.parent.parent
 _ENV_LOADED = False
 
 
-def _load_env():
+def _load_env() -> None:
     """把 .env 的 K=V 读进环境变量（已存在的不覆盖）。无 .env 则跳过。幂等。"""
     global _ENV_LOADED
     if _ENV_LOADED:
@@ -28,17 +31,17 @@ def _load_env():
         os.environ.setdefault(k.strip(), v.strip())
 
 
-def list_models():
+def list_models() -> dict[str, dict]:
     data = json.loads((_ROOT / "models.json").read_text("utf-8"))
     return {k: v for k, v in data.items() if k != "default"}
 
 
-def default_model():
+def default_model() -> str:
     data = json.loads((_ROOT / "models.json").read_text("utf-8"))
     return data["default"]
 
 
-def stream_chat(messages, model=None):
+def stream_chat(messages: list[dict], model: str | None = None) -> Generator[tuple[str, str], None, None]:
     """向 LLM 发流式请求，逐 token yield。"""
     _load_env()
     cfg = list_models()[model or default_model()]

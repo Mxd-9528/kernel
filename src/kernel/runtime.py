@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import threading
 import traceback
@@ -20,7 +22,7 @@ _ANSI = re.compile(r"\x1b\[[0-9;]*[mK]")
 _MAX_FEEDBACK_CHARS = 20000
 
 
-def _run_cell(code):
+def _run_cell(code: str):
     """在持久 IPython 内核里执行一个代码块。
 
     成功：返回表达式值（若有）或 stdout 字符串；无输出返回 None。
@@ -38,6 +40,7 @@ def _run_cell(code):
     if not r.success:
         # IPython 语义：语法错误在 error_before_exec，运行时错误在 error_in_exec，两者互斥
         exc = r.error_before_exec or r.error_in_exec
+        assert exc is not None  # IPython 保证：success=False 时二者必有其一下
         # 把 stdout / stderr 附到异常上，feedback 能一并展示
         exc._kernel_stdout = stdout  # type: ignore[attr-defined]
         exc._kernel_stderr = stderr  # type: ignore[attr-defined]
@@ -52,7 +55,7 @@ def _run_cell(code):
     return stdout.strip() if stdout.strip() else None
 
 
-def _truncate(text):
+def _truncate(text: str) -> str:
     """超过 _MAX_FEEDBACK_CHARS 时按 40/20/40 三段保留。"""
     if len(text) <= _MAX_FEEDBACK_CHARS:
         return text
@@ -69,7 +72,7 @@ def _truncate(text):
     )
 
 
-def feedback(results):
+def feedback(results: list) -> str:
     """把代码块的执行结果拼成喂给模型的环境反馈文本。
 
     每项可能是任意 Python 对象或 BaseException。用 Python 内置 repr / traceback
@@ -96,15 +99,15 @@ def feedback(results):
     return "\n".join(parts)
 
 
-def _execute_block(code):
+def _execute_block(code: str):
     """执行一个代码块，返回结果或异常对象（不 raise 出去，让 feedback 分派）。
 
     超时保护：代码块最多跑 _MAX_RUN_SECS 秒；超过则放弃等待、返回 TimeoutError。
     daemon 线程：底层线程随 kernel 退出而清理；不做"转后台"任务管理——
     模型想让某个函数在后台跑，自己用 threading.Thread + daemon=True 或 tools/bg_start。
     """
-    result = [None]
-    error = [None]
+    result: list = [None]
+    error: list[BaseException | None] = [None]
 
     def _worker():
         try:
@@ -120,11 +123,11 @@ def _execute_block(code):
     return error[0] if error[0] is not None else result[0]
 
 
-def extract_blocks(reply):
+def extract_blocks(reply: str) -> list[str]:
     """从回复中提取代码块，返回去壳后的代码字符串列表。"""
     return [m.strip() for m in re.findall(_EXEC_PATTERN, reply, re.DOTALL)]
 
 
-def execute_blocks(blocks):
+def execute_blocks(blocks: list[str]) -> list:
     """执行代码块列表，返回结果列表。"""
     return [_execute_block(b) for b in blocks]

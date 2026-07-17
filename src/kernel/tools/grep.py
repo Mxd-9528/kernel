@@ -5,6 +5,8 @@
 失败通过 raise 传递（re.error / ValueError）。
 """
 
+from __future__ import annotations
+
 import fnmatch
 import os
 import re
@@ -14,11 +16,11 @@ from .exclude import _EXCLUDE, _EXCLUDE_FILES
 _MODES = {"content", "files_with_matches", "count"}
 
 
-def _norm(p):
+def _norm(p: str) -> str:
     return os.path.normpath(p).replace("\\", "/")
 
 
-def grep(pattern, path=".", glob=None, output_mode="content", case_insensitive=False):
+def grep(pattern: str, path: str = ".", glob: str | None = None, output_mode: str = "content", case_insensitive: bool = False):
     """递归正则搜索文件内容。output_mode: content（默认，list[dict] 含 file+lines）/ files_with_matches（list[str] 路径）/ count（dict[str,int] 每文件匹配数）。glob 按文件名过滤，case_insensitive 大小写不敏感。"""
     if output_mode not in _MODES:
         raise ValueError(f"无效 output_mode：{output_mode}")

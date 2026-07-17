@@ -4,10 +4,12 @@
 失败通过 raise 传递原生异常（FileNotFoundError / IsADirectoryError / UnicodeDecodeError）。
 """
 
+from __future__ import annotations
+
 import os
 
 
-def read(file_path, offset=None, limit=None):
+def read(file_path: str, offset: int | None = None, limit: int | None = None) -> str:
     """读文件，返回带行号（文本）或页码（PDF）的字符串。
 
     offset/limit：对文本是行，对 PDF 是页，均从 1 开始计数。
@@ -20,7 +22,7 @@ def read(file_path, offset=None, limit=None):
     return _read_text(file_path, offset, limit)
 
 
-def _read_text(file_path, offset=None, limit=None):
+def _read_text(file_path: str, offset: int | None = None, limit: int | None = None) -> str:
     if os.path.isdir(file_path):
         raise IsADirectoryError(f"路径是目录，read 仅支持文件：{file_path}")
 
@@ -35,7 +37,7 @@ def _read_text(file_path, offset=None, limit=None):
     return "".join(f"{line_start + i}\t{line}" for i, line in enumerate(chunk))
 
 
-def _read_pdf(file_path, offset=None, limit=None):
+def _read_pdf(file_path: str, offset: int | None = None, limit: int | None = None) -> str:
     try:
         import pdfplumber
     except ImportError:

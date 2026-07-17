@@ -12,6 +12,8 @@
     survey(path=".")                    # 指定项目根目录
 """
 
+from __future__ import annotations
+
 import os
 import re
 import subprocess
@@ -310,7 +312,7 @@ def _match_file(resolved, file_set):
 
 # ---- 查询模式 ----
 
-def survey(mode="overview", target=None, path=".", n=10):
+def survey(mode: str = "overview", target: str | None = None, path: str = ".", n: int = 10):
     """测绘项目架构：符号构成、模块依赖、变更影响面。
 
     需要理解项目结构、追踪依赖链、评估改动波及范围时使用。

@@ -12,7 +12,7 @@ class Observer(Protocol):
     def on_delta(self, token: str) -> None: ...
     def on_flush(self) -> None: ...
     def on_user(self, text: str) -> None: ...
-    def before_send(self, messages: list, model: str) -> None: ...
+    def before_send(self, messages: list, model: str | None) -> None: ...
     def save(self, messages: list) -> None: ...
     def display_msg(self, content: str) -> None: ...
 
@@ -20,34 +20,34 @@ class Observer(Protocol):
 class CompositeObserver:
     """把多个观察者组合成一个，调用时分发到每个。"""
 
-    def __init__(self, observers):
+    def __init__(self, observers: list[Observer]) -> None:
         self._observers = observers
 
-    def on_thinking(self, token):
+    def on_thinking(self, token: str) -> None:
         for o in self._observers:
             o.on_thinking(token)
 
-    def on_delta(self, token):
+    def on_delta(self, token: str) -> None:
         for o in self._observers:
             o.on_delta(token)
 
-    def on_flush(self):
+    def on_flush(self) -> None:
         for o in self._observers:
             o.on_flush()
 
-    def on_user(self, text):
+    def on_user(self, text: str) -> None:
         for o in self._observers:
             o.on_user(text)
 
-    def before_send(self, messages, model):
+    def before_send(self, messages: list, model: str | None) -> None:
         for o in self._observers:
             o.before_send(messages, model)
 
-    def save(self, messages):
+    def save(self, messages: list) -> None:
         for o in self._observers:
             o.save(messages)
 
-    def display_msg(self, content):
+    def display_msg(self, content: str) -> None:
         for o in self._observers:
             o.display_msg(content)
 
@@ -57,10 +57,10 @@ class BaseObserver:
 
     模式来自 Java AWT MouseAdapter（GoF Adapter 模式）：接口有 N 个方法，
     基类提供 N 个空实现，消费者只覆盖自己关心的。"""
-    def on_thinking(self, token): pass
-    def on_delta(self, token): pass
-    def on_flush(self): pass
-    def on_user(self, text): pass
-    def before_send(self, messages, model): pass
-    def save(self, messages): pass
-    def display_msg(self, content): pass
+    def on_thinking(self, token: str) -> None: pass
+    def on_delta(self, token: str) -> None: pass
+    def on_flush(self) -> None: pass
+    def on_user(self, text: str) -> None: pass
+    def before_send(self, messages: list, model: str | None) -> None: pass
+    def save(self, messages: list) -> None: pass
+    def display_msg(self, content: str) -> None: pass

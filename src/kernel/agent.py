@@ -1,5 +1,9 @@
 """决策-执行-观察 循环。"""
-from .observer import BaseObserver
+from __future__ import annotations
+
+import threading
+
+from .observer import BaseObserver, Observer
 
 from . import llm
 from . import runtime
@@ -9,18 +13,18 @@ from . import runtime
 class Response:
     """模型响应：封装文本内容，延迟提取代码块。"""
 
-    def __init__(self, content):
+    def __init__(self, content: str) -> None:
         self.content = content
 
-    def has_code(self):
+    def has_code(self) -> bool:
         return bool(runtime.extract_blocks(self.content))
 
     @property
-    def code(self):
+    def code(self) -> list[str]:
         return runtime.extract_blocks(self.content)
 
 
-def stream_model(messages, model=None, *, observer=None, stop_event=None):
+def stream_model(messages: list[dict], model: str | None = None, *, observer: Observer | None = None, stop_event: threading.Event | None = None) -> Response:
     """流式调用 LLM，逐 token 通知 observer，返回 Response。
     
     stop_event: threading.Event | None。若被设置，token 循环立即终止，
@@ -45,7 +49,7 @@ def stream_model(messages, model=None, *, observer=None, stop_event=None):
     return Response(content)
 
 
-def execute_code(code_blocks):
+def execute_code(code_blocks: list[str]) -> str:
     """执行代码块，返回环境反馈文本。"""
     return runtime.feedback(runtime.execute_blocks(code_blocks))
 
@@ -55,7 +59,7 @@ def execute_code(code_blocks):
 _MAX_ITERS = 20
 
 
-def agent(prompt, *, messages=None, model=None, stop_event=None, max_iters=_MAX_ITERS, observer=None):
+def agent(prompt: str, *, messages: list[dict] | None = None, model: str | None = None, stop_event: threading.Event | None = None, max_iters: int = _MAX_ITERS, observer: Observer | None = None) -> list[dict]:
     """决策-执行-观察 循环。"""
     if observer is None:
         observer = BaseObserver()

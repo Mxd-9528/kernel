@@ -5,6 +5,8 @@ stderr 合并到 stdout（按时序）。命令退出码非零不是失败——
 超时通过 raise subprocess.TimeoutExpired 传递（含 .stdout 属性可看已收集输出）。
 """
 
+from __future__ import annotations
+
 import os
 import shutil
 import subprocess
@@ -16,11 +18,11 @@ _GIT_BASH = [
 ]
 
 
-def _bash_exe():
+def _bash_exe() -> str:
     return shutil.which("bash") or next((p for p in _GIT_BASH if shutil.which(p)), "bash")
 
 
-def bash(command, timeout=30, cwd=None):
+def bash(command: str, timeout: int = 30, cwd: str | None = None) -> subprocess.CompletedProcess:
     """执行 shell 命令（Git Bash/POSIX），返回 subprocess.CompletedProcess。
 
     timeout: 硬超时秒数。到时未完成即杀进程 + raise TimeoutExpired。默认 30。

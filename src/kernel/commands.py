@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .history import reset_history
 from .llm import list_models
 
@@ -8,7 +10,7 @@ _HELP = """内置命令：
   exit           退出"""
 
 
-def handle(cmd, messages, model):
+def handle(cmd: str, messages: list[dict], model: str) -> tuple[list[dict], str, str]:
     if cmd == "/new":
         messages = reset_history()
         return messages, model, "已开新对话。"

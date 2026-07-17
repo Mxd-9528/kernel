@@ -5,6 +5,8 @@
 触发用字符数估算（粗略但够；token 精确但要 tokenizer，YAGNI）。
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 from pathlib import Path
@@ -91,7 +93,7 @@ def compress(messages, model):
 from .observer import BaseObserver
 
 class _CompactObserver(BaseObserver):
-    def before_send(self, messages, model):
+    def before_send(self, messages: list, model: str | None) -> None:
         messages[:] = compact(messages, model=model)
 
 
