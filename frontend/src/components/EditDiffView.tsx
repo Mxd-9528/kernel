@@ -14,7 +14,7 @@ export function parseEditCall(code: string): EditDiff | null {
   if (!trimmed.startsWith('edit(')) return null
 
   // 简单的正则，不处理复杂转义
-  const pattern = /edit\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])([\s\S]*?)\3\s*,\s*(["'])([\s\S]*?)\5\s*\)/
+  const pattern = /edit\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])([\s\S]*?)\3\s*,\s*(["'])([\s\S]*?)\5\s*,?\s*\)/
   const match = code.match(pattern)
   if (!match) return null
 
