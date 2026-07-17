@@ -29,11 +29,13 @@ def _load_env():
 
 
 def list_models():
-    return json.loads((_ROOT / "models.json").read_text("utf-8"))
+    data = json.loads((_ROOT / "models.json").read_text("utf-8"))
+    return {k: v for k, v in data.items() if k != "default"}
 
 
 def default_model():
-    return next(iter(list_models()))
+    data = json.loads((_ROOT / "models.json").read_text("utf-8"))
+    return data["default"]
 
 
 def stream_chat(messages, model=None):

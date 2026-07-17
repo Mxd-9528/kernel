@@ -18,6 +18,13 @@ def handle(cmd, messages, model):
         if not name:
             return messages, model, f"当前模型：{model}。可选：{', '.join(models)}"
         elif name in models:
+            import json
+            from pathlib import Path
+            root = Path(__file__).resolve().parent.parent.parent
+            cfg_path = root / "models.json"
+            data = json.loads(cfg_path.read_text("utf-8"))
+            data["default"] = name
+            cfg_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             return messages, name, f"已切换到 {name}"
         else:
             return messages, model, f"未知模型 {name}。可选：{', '.join(models)}"

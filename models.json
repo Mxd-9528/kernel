@@ -1,12 +1,13 @@
 {
-  "ark-code": {
-    "url": "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions",
-    "model": "ark-code-latest",
-    "key_env": "ARK_KEY"
-  },
+  "default": "ark-code",
   "deepseek-v4-flash": {
     "url": "https://api.deepseek.com/v1/chat/completions",
     "model": "deepseek-v4-flash",
     "key_env": "DEEPSEEK_KEY"
+  },
+  "ark-code": {
+    "url": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions",
+    "model": "ark-code-latest",
+    "key_env": "ARK_PLAN_KEY"
   }
 }
