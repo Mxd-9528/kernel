@@ -129,6 +129,73 @@ body {
   color: inherit;
 }
 
+/* 讲解代码块（markdown 里的 ```...```）：永远展开，无折叠交互 */
+.md-code-block {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-hairline);
+  font-family: JetBrains Mono, Fira Code, monospace;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-x: auto;
+  color: var(--color-ink);
+  white-space: pre;
+}
+/* 行内代码：轻背景 + 内边距，与正文区分 */
+.md-inline-code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-hairline);
+  font-family: JetBrains Mono, Fira Code, monospace;
+  font-size: 0.9em;
+  color: var(--color-ink);
+}
+
+/* 语法高亮 token 颜色——低饱和度，复用主题变量 */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--color-muted-soft);
+  font-style: italic;
+}
+.token.keyword,
+.token.operator,
+.token.important,
+.token.rule,
+.token.atrule,
+.token.number,
+.token.boolean,
+.token.constant,
+.token.symbol,
+.token.builtin {
+  color: var(--color-primary);
+}
+.token.string,
+.token.char,
+.token.attr-value,
+.token.regex {
+  color: var(--color-success);
+}
+.token.function,
+.token.class-name,
+.token.tag,
+.token.selector {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.token.punctuation,
+.token.property,
+.token.attr-name,
+.token.variable {
+  color: var(--color-body);
+}
+.token.deleted { color: var(--color-error); }
+.token.inserted { color: var(--color-success); }
+
 /* 消息气泡 */
 .bubble {
   margin-bottom: 6px;
@@ -157,6 +224,11 @@ body {
   font-size: 10px;
   line-height: 1.1;
   color: var(--color-muted-soft);
+}
+/* 思考展开后的正文：暗色斜体，与助手正文区分 */
+.bubble-thinking .bubble-text {
+  color: var(--color-muted);
+  font-style: italic;
 }
 .bubble-text {
   margin: 2px 0 0 0;

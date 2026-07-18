@@ -36,11 +36,20 @@ describe("MessageBubble", () => {
     expect(screen.getByText("1")).toBeTruthy()
   })
 
-  it("assistant 消息渲染代码块", () => {
+  it("assistant 讲解代码块渲染为 md-code-block，不带折叠 class", () => {
     render(<MessageBubble message={{ id: "5", role: "assistant", content: "```python\nprint('hi')\nprint('there')\n```" }} />)
-    const codeBlock = document.querySelector(".code-block")
-    expect(codeBlock).toBeTruthy()
-    expect(codeBlock!.textContent).toContain("print('hi')")
+    const block = document.querySelector(".md-code-block")
+    expect(block).toBeTruthy()
+    expect(block!.textContent).toContain("print('hi')")
+    // 讲解代码块不复用折叠专用的 .code-block
+    expect(document.querySelector(".code-block")).toBeNull()
+  })
+
+  it("assistant EXEC 段渲染为 .code-block（可折叠）", () => {
+    render(<MessageBubble message={{ id: "6", role: "assistant", content: "前\n<EXEC>\n```python\nprint(1)\nprint(2)\nprint(3)\nprint(4)\n```\n</EXEC>\n后" }} />)
+    expect(document.querySelector(".code-block")).toBeTruthy()
+    // 讲解型不应出现
+    expect(document.querySelector(".md-code-block")).toBeNull()
   })
 
   it("thinking 消息默认折叠，点击展开", async () => {

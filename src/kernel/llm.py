@@ -49,11 +49,14 @@ def stream_chat(messages: list[dict], model: str | None = None) -> Generator[tup
     if not key:
         raise RuntimeError(f"环境变量 {cfg['key_env']} 未设置——请在 .env 或系统环境变量里配置")
 
-    body = json.dumps({
+    payload: dict = {
         "model": cfg["model"],
         "messages": messages,
         "stream": True,
-    }).encode("utf-8")
+    }
+    if "max_tokens" in cfg:
+        payload["max_tokens"] = cfg["max_tokens"]
+    body = json.dumps(payload).encode("utf-8")
 
     req = urllib.request.Request(
         cfg["url"],
