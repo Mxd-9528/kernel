@@ -2,6 +2,8 @@
 
 kernel 项目的 AI 阅读入口。本文件自动加载，讲**怎么做**；宪法讲**为什么**。
 
+**根框架**：IPython（后端 agent 内核）+ React（前端 UI）。功能长在这两个基质上，不另起炉灶。
+
 > **[CONSTITUTION.md](CONSTITUTION.md)** 是本项目最高准则（元规则、硬约束、增负信号）。做架构决策、设计新模块、判断是否新增抽象时，先 `read("CONSTITUTION.md")`。日常改动无需读。
 
 ## 导航
