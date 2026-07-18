@@ -22,6 +22,10 @@
 
 实现这一点的机制是**依赖**：依赖标准库而非重写，依赖既有术语而非自造，依赖经典方案而非就地拼凑，依赖契约而非实现细节。好的依赖使调用者不必理解被依赖者的内部——这是认知负荷得以卸载的根本方式。
 
+依赖有其分层。库是被调用者，你决定何时唤它；框架是调用者，它决定何时唤你（Hollywood Principle）。控制方向的反转，使框架的实现细节从调用者视野中消失——你只需理解注入点，其余卸载到框架内部（Pull Complexity Downward）。框架把一整套已被验证的模式凝结成可运行的代码（Reification of Patterns）；引入一个框架，等同于一次性接入这套模式，不必逐个重述。
+
+由此产生一条顺序约束：框架先于功能。功能可以在任何框架上长出，但长成什么形状由框架决定。先定框架，功能顺其生长；先定功能再挑框架，框架就退化为功能的补丁——它内藏的模式无从展开，深度无从利用（Strategic Programming）。
+
 依赖之所以有效，不是因为它正确，而是因为它可预测。**最小惊奇原则**（Principle of Least Astonishment）是依赖的底层保证：被依赖者的行为必须符合调用者基于其名称和接口形成的预期。当代码做了读者预期它做的事，理解成本为零。对陌生人优化的本质，就是减少陌生人遭遇惊奇的可能。
 
 以下所有规则都服务于这一件事：不是追求"少"，是追求"不需要更多"。代码本身即事实源，文档不重复陈述代码中已存在的决策。
@@ -141,6 +145,7 @@
 - 为消除表面差异而引入新规则。整齐了目录，是否复杂了约定？这是 easy 吞噬 simple——熟悉感不意味着简单，解耦才是简单。
 - 代码中重复陈述了文档已阐明的决策。读者需要维护两处一致性，是否增加了不一致的风险？
 - 将用户主动动作表述为LLM的自动行为。LLM无内部状态，此处是否实际上是用户手动的委婉表述？
+- 引入框架/库后本项目净代码未减少。框架的价值在于替你隐藏的复杂性——引入后代码持平或增加时，隐藏未发生。此时该框架在本项目场景中是深模块还是又一层间接？
 
 ---
 
@@ -150,13 +155,14 @@
 
 - Parnas (1972): Information Hiding
 - Meyer (1988): Design by Contract
-- Ousterhout (2018): Deep Module, Cognitive Load
+- Ousterhout (2018): Deep Module, Cognitive Load, Pull Complexity Downward, Strategic Programming
+- Brooks (1986): No Silver Bullet, Essential vs Accidental Complexity
+- Fowler (2005): Inversion of Control, Hollywood Principle
 - Beck (2002): Respond to a failing test
 - Von Mayrhauser & Vans (1995): Program Comprehension, Opportunistic Model
 - Alexander (1977): A Pattern Language
 - Gamma et al. (1994): Program to an interface
-- Evans (2003): Isolating the Domain
-- Kahneman (2011): Thinking, Fast and Slow
 - Dijkstra (1974): Separation of Concerns
 - Hickey (2011): Simple Made Easy
 - Wei et al. (2022): Chain-of-Thought Prompting
+- Johnson (1997): Frameworks Reify Patterns
