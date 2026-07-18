@@ -4,7 +4,7 @@
 
 不是「工具调用」范式。预置函数只是预加载进内核命名空间的普通函数，不够用直接写 Python。
 
-> [PRINCIPLES.md](PRINCIPLES.md) 是设计原则；[CLAUDE.md](CLAUDE.md) 是项目结构与操作手册（给 AI）。
+> [CONSTITUTION.md](CONSTITUTION.md) 是设计原则；[AGENTS.md](AGENTS.md) 是 AI 阅读入口（自动加载，分层导航到各子目录的 AGENTS.md）。
 
 ## 前置条件
 

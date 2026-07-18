@@ -13,8 +13,8 @@ from pathlib import Path
 
 from .llm import stream_chat
 
-KEEP_ROUNDS = 6       # 保留最近几轮完整对话（数 assistant）
-THRESHOLD = 100_000    # 中间可压部分超过多少字符就触发
+KEEP_ROUNDS = 12       # 保留最近几轮完整对话（数 assistant）
+THRESHOLD = 80_000    # 中间可压部分超过多少字符就触发
 
 _COMPRESS_PROMPT = (Path(__file__).parent / "compact_prompt.md").read_text("utf-8")
 
