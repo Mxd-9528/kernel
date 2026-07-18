@@ -112,6 +112,7 @@ body {
   overflow: hidden;
   color: var(--color-muted-soft);
   max-height: calc(12px * 1.25 * 3 + 8px);
+  animation: code-fade-in 200ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 .code-block-body {
   margin: 0;
@@ -122,6 +123,16 @@ body {
   overflow-x: auto;
   color: var(--color-ink);
   white-space: pre;
+  animation: code-expand 260ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+/* 折叠展开动效：height + opacity 桥接，展开比收起慢（Emil Kowalski 原则） */
+@keyframes code-expand {
+  from { max-height: 0; opacity: 0; }
+  to { max-height: 2000px; opacity: 1; }
+}
+@keyframes code-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .code-block-body code,
 .code-block-preview code {
