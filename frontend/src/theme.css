@@ -11,7 +11,7 @@
   --color-code-bg: #ede9e1;
   --color-ink: #26251e;
   --color-body: #4a4640;
-  --color-muted: #807d72;
+  --color-muted: #706d64;
   --color-muted-soft: #a09c92;
   --color-on-primary: #ffffff;
   --color-thinking: #dfa88f;
@@ -26,16 +26,16 @@
 [data-theme="dark"] {
   --color-primary: #ff6b2b;
   --color-primary-active: #e55a1a;
-  --color-canvas: #1e1e1c;
-  --color-canvas-soft: #252523;
-  --color-surface: #2a2a28;
-  --color-hairline: #383835;
-  --color-hairline-strong: #4a4a46;
-  --color-code-bg: #1a1a18;
-  --color-ink: #f0f0ed;
-  --color-body: #b5b3ad;
-  --color-muted: #8a8882;
-  --color-muted-soft: #6a6862;
+  --color-canvas: #232220;
+  --color-canvas-soft: #2a2925;
+  --color-surface: #302f2b;
+  --color-hairline: #3b3a35;
+  --color-hairline-strong: #504d47;
+  --color-code-bg: #191816;
+  --color-ink: #f2f0eb;
+  --color-body: #c0bcb2;
+  --color-muted: #a09c93;
+  --color-muted-soft: #6f6d66;
   --color-on-primary: #ffffff;
   --color-thinking: #3a3028;
   --color-thinking-border: #5a4a3a;
@@ -48,9 +48,9 @@
 /* 全局 */
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "HarmonyOS Sans SC", "Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.6;
   background: var(--color-canvas);
   color: var(--color-body);
   scrollbar-color: var(--color-hairline-strong) transparent;
@@ -165,7 +165,7 @@ body {
   color: var(--color-ink);
 }
 
-/* 语法高亮 token 颜色——低饱和度，复用主题变量 */
+/* 语法高亮 token 颜色——极简两色：注释灰斜体 + 关键字主色，其余回归正文 */
 .token.comment,
 .token.prolog,
 .token.doctype,
@@ -177,35 +177,15 @@ body {
 .token.operator,
 .token.important,
 .token.rule,
-.token.atrule,
-.token.number,
-.token.boolean,
-.token.constant,
-.token.symbol,
-.token.builtin {
+.token.atrule {
   color: var(--color-primary);
 }
-.token.string,
-.token.char,
-.token.attr-value,
-.token.regex {
-  color: var(--color-success);
+/* 折叠预览态：token 颜色一律失效，回归 muted-soft 淡化 */
+.code-block-preview .token {
+  color: inherit;
+  font-style: inherit;
+  font-weight: inherit;
 }
-.token.function,
-.token.class-name,
-.token.tag,
-.token.selector {
-  color: var(--color-ink);
-  font-weight: 600;
-}
-.token.punctuation,
-.token.property,
-.token.attr-name,
-.token.variable {
-  color: var(--color-body);
-}
-.token.deleted { color: var(--color-error); }
-.token.inserted { color: var(--color-success); }
 
 /* 消息气泡 */
 .bubble {
@@ -247,7 +227,7 @@ body {
   word-break: break-word;
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.6;
   color: var(--color-body);
 }
 
@@ -258,7 +238,7 @@ body {
 .bubble-assistant h4, .bubble-assistant h5, .bubble-assistant h6 {
   color: var(--color-ink); font-weight: 600; margin: 3px 0 1px;
 }
-.bubble-assistant p { margin: 1px 0 2px; color: var(--color-body); line-height: 1.4; }
+.bubble-assistant p { margin: 6px 0; color: var(--color-body); line-height: 1.6; }
 .bubble-assistant a { color: var(--color-primary); text-decoration: none; }
 .bubble-assistant a:hover { text-decoration: underline; }
 .bubble-assistant ul, .bubble-assistant ol { padding-left: 18px; margin: 1px 0 2px; }
