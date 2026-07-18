@@ -36,6 +36,13 @@ describe("MessageBubble", () => {
     expect(screen.getByText("1")).toBeTruthy()
   })
 
+  it("assistant 消息渲染数学公式", () => {
+    render(<MessageBubble message={{ id: "math", role: "assistant", content: "行内 $a^2+b^2=c^2$ 与块级 $$E=mc^2$$" }} />)
+    // KaTeX 用 .katex 类包裹每个公式；行内 + 块级 = 至少 2 个
+    const katex = document.querySelectorAll(".katex")
+    expect(katex.length).toBeGreaterThanOrEqual(2)
+  })
+
   it("assistant 讲解代码块渲染为 md-code-block，不带折叠 class", () => {
     render(<MessageBubble message={{ id: "5", role: "assistant", content: "```python\nprint('hi')\nprint('there')\n```" }} />)
     const block = document.querySelector(".md-code-block")

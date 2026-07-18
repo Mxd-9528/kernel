@@ -2,15 +2,18 @@
 import { useState } from "react"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
 // 子路径 /common 只打包主流 40+ 语言（vs default 入口的 all 版 200+）
 import rehypePrism from "rehype-prism-plus/common"
+import rehypeKatex from "rehype-katex"
+import "katex/dist/katex.min.css"
 import type { PluggableList } from "unified"
 import type { RenderedMessage } from "../types"
 import { splitByExec } from "../lib/segments"
 import { CodeBlock } from "./CodeBlock"
 import { EditDiffView, parseEditCall } from "./EditDiffView"
 
-const rehypePlugins: PluggableList = [[rehypePrism, { ignoreMissing: true }]]
+const rehypePlugins: PluggableList = [[rehypePrism, { ignoreMissing: true }], rehypeKatex]
 
 export interface MessageBubbleProps {
   message: RenderedMessage
@@ -28,7 +31,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {segments.map((seg, i) => {
           if (seg.type === "text") {
             return (
-              <Markdown key={i} remarkPlugins={[remarkGfm]} rehypePlugins={rehypePlugins} components={textComponents}>
+              <Markdown key={i} remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={rehypePlugins} components={textComponents}>
                 {seg.content}
               </Markdown>
             )
