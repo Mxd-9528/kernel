@@ -1,5 +1,5 @@
-
 import { useState } from "react"
+import { diffArrays, diffWordsWithSpace } from "diff"
 
 export interface EditDiff {
   filePath: string
@@ -36,45 +36,56 @@ export function EditDiffView({ code, diff }: Props) {
   const preview = lines.slice(0, PREVIEW_LINES).join("\n")
   const hasMore = lines.length > PREVIEW_LINES
 
-  // LCS 算法：计算最长公共子序列，避免插入/删除导致的错位
-  const oldLines = diff.oldCode.split("\n")
-  const newLines = diff.newCode.split("\n")
-
-  // 构建 LCS 表
-  const m = oldLines.length
-  const n = newLines.length
-  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0))
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (oldLines[i - 1] === newLines[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1])
+  // 行级 diff → 双栏对齐；修改行内做词级 diff 高亮
+  type Seg = { text: string; kind: "same" | "del" | "add" }
+  type Row = { segs: Seg[]; changed: boolean }
+  const plain = (line: string, kind: Seg["kind"]): Seg[] => [{ text: line, kind }]
+  const wordPair = (o: string, n: string): [Seg[], Seg[]] => {
+    if (o === "") return [plain("", "same"), plain(n, "add")]
+    if (n === "") return [plain(o, "del"), plain("", "same")]
+    const parts = diffWordsWithSpace(o, n)
+    const oSegs: Seg[] = [], nSegs: Seg[] = []
+    parts.forEach((p) => {
+      if (p.added) nSegs.push({ text: p.value, kind: "add" })
+      else if (p.removed) oSegs.push({ text: p.value, kind: "del" })
+      else { oSegs.push({ text: p.value, kind: "same" }); nSegs.push({ text: p.value, kind: "same" }) }
+    })
+    return [oSegs, nSegs]
+  }
+  const changes = diffArrays(diff.oldCode.split("\n"), diff.newCode.split("\n"))
+  const oldResult: Row[] = []
+  const newResult: Row[] = []
+  for (let k = 0; k < changes.length; k++) {
+    const c = changes[k]
+    if (!c.added && !c.removed) {
+      c.value.forEach((l) => {
+        oldResult.push({ segs: plain(l, "same"), changed: false })
+        newResult.push({ segs: plain(l, "same"), changed: false })
+      })
+    } else if (c.removed && changes[k + 1]?.added) {
+      const rem = c.value, add = changes[k + 1].value
+      const len = Math.max(rem.length, add.length)
+      for (let r = 0; r < len; r++) {
+        const [oSegs, nSegs] = wordPair(rem[r] ?? "", add[r] ?? "")
+        oldResult.push({ segs: oSegs, changed: true })
+        newResult.push({ segs: nSegs, changed: true })
       }
-    }
-  }
-
-  // 回溯 LCS，生成对齐后的左右结果
-  const oldResult: { line: string; changed: boolean }[] = []
-  const newResult: { line: string; changed: boolean }[] = []
-  let i = m, j = n
-  while (i > 0 || j > 0) {
-    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
-      oldResult.unshift({ line: oldLines[i - 1], changed: false })
-      newResult.unshift({ line: newLines[j - 1], changed: false })
-      i--; j--
-    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-      // 新增行：右边有，左边补空行
-      oldResult.unshift({ line: "", changed: true })
-      newResult.unshift({ line: newLines[j - 1], changed: true })
-      j--
+      k++
+    } else if (c.removed) {
+      c.value.forEach((l) => {
+        oldResult.push({ segs: plain(l, "del"), changed: true })
+        newResult.push({ segs: plain("", "same"), changed: true })
+      })
     } else {
-      // 删除行：左边有，右边补空行
-      oldResult.unshift({ line: oldLines[i - 1], changed: true })
-      newResult.unshift({ line: "", changed: true })
-      i--
+      c.value.forEach((l) => {
+        oldResult.push({ segs: plain("", "same"), changed: true })
+        newResult.push({ segs: plain(l, "add"), changed: true })
+      })
     }
   }
+  const renderSegs = (segs: Seg[]) => segs.map((s, i) => (
+    <span key={i} className={s.kind === "del" ? "edit-word-del" : s.kind === "add" ? "edit-word-add" : ""}>{s.text}</span>
+  ))
 
   return (
     <div className="code-block" onClick={() => setOpen(!open)}>
@@ -87,7 +98,7 @@ export function EditDiffView({ code, diff }: Props) {
               whiteSpace: "pre",
             }}>
               {oldResult.map((l, i) => (
-                <div key={i} className={l.changed ? "edit-line-del" : ""}>{l.line}</div>
+                <div key={i} className={l.changed ? "edit-line-del" : ""}>{renderSegs(l.segs)}</div>
               ))}
             </pre>
           </div>
@@ -98,7 +109,7 @@ export function EditDiffView({ code, diff }: Props) {
               whiteSpace: "pre",
             }}>
               {newResult.map((l, i) => (
-                <div key={i} className={l.changed ? "edit-line-add" : ""}>{l.line}</div>
+                <div key={i} className={l.changed ? "edit-line-add" : ""}>{renderSegs(l.segs)}</div>
               ))}
             </pre>
           </div>

@@ -338,3 +338,14 @@ body {
   margin: 0 -10px;
   padding: 0 10px;
 }
+
+/* 词级：叠加更深底色，精确标出改动片段 */
+.edit-word-del {
+  background: color-mix(in srgb, var(--color-error) 30%, transparent);
+  border-radius: 2px;
+}
+
+.edit-word-add {
+  background: color-mix(in srgb, var(--color-success) 30%, transparent);
+  border-radius: 2px;
+}
