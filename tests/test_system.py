@@ -9,7 +9,7 @@ def test_manifest():
     names = {name for name, _ in presets()}
     assert "read" in names
     text = list_tools()
-    assert "read(file_path, offset=None, limit=None)" in text
+    assert "read(file_path: 'str', offset: 'int | None' = None, limit: 'int | None' = None) -> 'str'" in text
     assert "读文件" in text
     print("manifest ok")
 

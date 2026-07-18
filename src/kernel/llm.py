@@ -66,12 +66,17 @@ def stream_chat(messages: list[dict], model: str | None = None) -> Generator[tup
         body = e.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"HTTP {e.code}: {body}") from e
 
+    # 完整性追踪：区分"正常读到 [DONE]"与"迭代器静默结束"
+    finished_cleanly = False
+    last_finish_reason: str | None = None
+
     for line_bytes in resp:
         line = line_bytes.decode("utf-8").strip()
         if not line or not line.startswith("data: "):
             continue
         data_str = line[6:]
         if data_str == "[DONE]":
+            finished_cleanly = True
             break
         try:
             chunk = json.loads(data_str)
@@ -80,6 +85,10 @@ def stream_chat(messages: list[dict], model: str | None = None) -> Generator[tup
         choices = chunk.get("choices")
         if not choices:
             continue
+        # OpenAI 兼容协议：finish_reason 明确告知终止原因
+        fr = choices[0].get("finish_reason")
+        if fr:
+            last_finish_reason = fr
         delta = choices[0].get("delta", {})
         reasoning = delta.get("reasoning_content")
         if reasoning:
@@ -87,5 +96,13 @@ def stream_chat(messages: list[dict], model: str | None = None) -> Generator[tup
         content = delta.get("content", "")
         if content:
             yield "content", content
+
+    # 终止信号：调用者据此决定是否追加告警
+    #   "stop"           模型自然结束
+    #   "length"         达到 max_tokens
+    #   "content_filter" 内容被过滤
+    #   "tool_calls"     工具调用（本项目未启用）
+    #   "incomplete"     流被切断，未收到 [DONE]（网关超时 / 连接中断）
+    yield "finish", last_finish_reason if finished_cleanly else "incomplete"
 
 

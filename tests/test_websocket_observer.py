@@ -20,19 +20,19 @@ def test_websocket_observer():
 
     obs.on_thinking("thinking")
     msg = obs.messages.get(timeout=0.1)
-    assert msg == {"type": "thinking", "token": "thinking"}
+    assert msg == {"jsonrpc": "2.0", "method": "window/thinking", "params": {"token": "thinking"}}
 
     obs.on_delta("hello")
     msg = obs.messages.get(timeout=0.1)
-    assert msg == {"type": "delta", "token": "hello"}
+    assert msg == {"jsonrpc": "2.0", "method": "window/delta", "params": {"token": "hello"}}
 
     obs.on_flush()
     msg = obs.messages.get(timeout=0.1)
-    assert msg == {"type": "flush"}
+    assert msg == {"jsonrpc": "2.0", "method": "window/flush", "params": {}}
 
     obs.display_msg("hello world")
     msg = obs.messages.get(timeout=0.1)
-    assert msg == {"type": "display", "content": "hello world"}
+    assert msg == {"jsonrpc": "2.0", "method": "window/display", "params": {"content": "hello world"}}
 
     obs.before_send([{"role": "user"}], "gpt-4")
     obs.save([{"role": "user"}])
@@ -42,9 +42,9 @@ def test_websocket_observer():
     obs.on_delta("d1")
     obs.on_flush()
     expected = [
-        {"type": "thinking", "token": "t1"},
-        {"type": "delta", "token": "d1"},
-        {"type": "flush"},
+        {"jsonrpc": "2.0", "method": "window/thinking", "params": {"token": "t1"}},
+        {"jsonrpc": "2.0", "method": "window/delta", "params": {"token": "d1"}},
+        {"jsonrpc": "2.0", "method": "window/flush", "params": {}},
     ]
     for exp in expected:
         msg = obs.messages.get(timeout=0.1)
@@ -52,6 +52,6 @@ def test_websocket_observer():
 
     obs.on_delta("fast")
     msg = obs.messages.get(timeout=0.1)
-    assert msg == {"type": "delta", "token": "fast"}
+    assert msg == {"jsonrpc": "2.0", "method": "window/delta", "params": {"token": "fast"}}
 
     print("websocket_observer ok")

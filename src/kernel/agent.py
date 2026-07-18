@@ -33,17 +33,29 @@ def stream_model(messages: list[dict], model: str | None = None, *, observer: Ob
     if observer is None:
         observer = BaseObserver()
     content = ""
+    finish_reason: str | None = None
     try:
         for kind, token in llm.stream_chat(messages, model):
             if stop_event and stop_event.is_set():
                 break
             if kind == "thinking":
                 observer.on_thinking(token)
-            else:
+            elif kind == "finish":
+                finish_reason = token
+            else:  # "content"
                 content += token
                 observer.on_delta(token)
     except Exception as e:
-        content = f"LLM 请求失败: {e}"
+        # 保留已累积 content，追加错误告警（原逻辑用错误字符串完全覆盖 content，会丢失流式已生成内容）
+        warn = f"\n\n⚠️ [LLM 请求失败: {e}]"
+        content += warn
+        observer.on_delta(warn)
+    else:
+        # 正常结束但终止原因异常：追加可见告警
+        if finish_reason and finish_reason != "stop":
+            warn = f"\n\n⚠️ [响应被截断: finish_reason={finish_reason}]"
+            content += warn
+            observer.on_delta(warn)
     finally:
         observer.on_flush()
     return Response(content)
