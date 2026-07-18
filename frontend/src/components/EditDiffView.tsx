@@ -9,11 +9,8 @@ export interface EditDiff {
 
 // 纯函数：从 content 解析 edit() 调用
 export function parseEditCall(code: string): EditDiff | null {
-  // 先检查是不是 edit 调用
-  const trimmed = code.trimStart()
-  if (!trimmed.startsWith('edit(')) return null
-
   // 简单的正则，不处理复杂转义
+  // 不加前缀守卫——首行是注释时也应能识别（正则自身即守卫）
   const pattern = /edit\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])([\s\S]*?)\3\s*,\s*(["'])([\s\S]*?)\5\s*,?\s*\)/
   const match = code.match(pattern)
   if (!match) return null
