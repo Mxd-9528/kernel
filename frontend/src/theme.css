@@ -349,3 +349,20 @@ body {
   background: color-mix(in srgb, var(--color-success) 30%, transparent);
   border-radius: 2px;
 }
+
+/* 暗模式：diff 展开区用略浅底色，避免红绿混色发闷 */
+[data-theme="dark"] .edit-diff-split {
+  background: #24211d;
+}
+[data-theme="dark"] .edit-line-del {
+  background: color-mix(in srgb, var(--color-error) 22%, transparent);
+}
+[data-theme="dark"] .edit-line-add {
+  background: color-mix(in srgb, var(--color-success) 22%, transparent);
+}
+[data-theme="dark"] .edit-word-del {
+  background: color-mix(in srgb, var(--color-error) 55%, transparent);
+}
+[data-theme="dark"] .edit-word-add {
+  background: color-mix(in srgb, var(--color-success) 55%, transparent);
+}
