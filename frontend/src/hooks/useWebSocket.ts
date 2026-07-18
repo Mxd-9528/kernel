@@ -1,6 +1,9 @@
 /**
  * Contract: WebSocket 连接生命周期管理 + 消息聚合状态机。
  *
+ * 模式：Reducer（reduceServerMessage）+ Projection（pendingMessage 从 buffer 派生）
+ *      + State Machine（bufferType 三态）+ Backpressure（TICK_MS / TARGET_TICKS 追平）。
+ *
  * 隐藏：重连、JSON 解析、消息缓冲、连接状态机、pending 消息投影。
  * 暴露：{ status, messages, streaming, send, interrupt }。
  *
