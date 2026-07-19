@@ -1,55 +1,38 @@
-"""observer 模块测试。"""
+"""observer 模块测试：纯显示协议（5 方法），BaseObserver 空实现。"""
 
 
-def test_composite_observer():
-    from kernel.observer import BaseObserver, CompositeObserver
+def test_base_observer_five_methods():
+    """Observer 协议收敛为 5 个纯显示方法；BaseObserver 提供空实现。"""
+    from kernel.observer import BaseObserver
 
-    calls = []
-    class Spy(BaseObserver):
-        def on_thinking(self, token): calls.append(("thinking", token))
-        def on_delta(self, token): calls.append(("delta", token))
-        def on_flush(self): calls.append(("flush",))
-        def before_send(self, messages, model): calls.append(("before_send", len(messages), model))
-        def save(self, messages): calls.append(("save", len(messages)))
-        def display_msg(self, content): calls.append(("display_msg", content))
+    required = {"on_thinking", "on_delta", "on_flush", "on_user", "display_msg"}
+    methods = {m for m in dir(BaseObserver) if not m.startswith("_") and callable(getattr(BaseObserver, m))}
+    assert methods == required, f"应恰好 5 个显示方法，实际 {methods}"
 
-    comp = CompositeObserver([Spy(), Spy()])
-    comp.on_thinking("t1")
-    comp.on_delta("d1")
-    comp.on_flush()
-    comp.before_send([{"role": "user"}], "gpt-4")
-    comp.save([{"role": "user"}])
-    comp.display_msg("hello")
+    # 后端逻辑（before_send/save）已剥离，不应再是 Observer 方法
+    assert "before_send" not in methods
+    assert "save" not in methods
 
-    assert len(calls) == 12, f"6 方法 x 2 观察者 = 12 次调用，实际 {len(calls)}"
-    assert calls[0] == ("thinking", "t1") and calls[1] == ("thinking", "t1")
 
-    empty = CompositeObserver([])
-    empty.on_thinking("x")
-    empty.on_delta("x")
-    empty.on_flush()
-    empty.before_send([], "")
-    empty.save([])
-    empty.display_msg("x")
+def test_base_observer_noop():
+    """BaseObserver 所有方法为空实现，可安全调用。"""
+    from kernel.observer import BaseObserver
 
-    null = BaseObserver()
-    null.on_thinking("x")
-    null.on_delta("x")
-    null.on_flush()
-    null.before_send([], "")
-    null.save([])
-    null.display_msg("x")
+    o = BaseObserver()
+    o.on_thinking("x")
+    o.on_delta("x")
+    o.on_flush()          # 无参兼容
+    o.on_flush("full")    # 带 text
+    o.on_user("x")
+    o.display_msg("x")
+    print("base_observer ok")
 
-    from kernel.display import spinner
-    from kernel.compact import observer as compact_obs
-    from kernel.history import observer as history_obs
 
-    required = {"on_thinking", "on_delta", "on_flush", "before_send", "save", "display_msg"}
-    for name, obj in [("display.spinner", spinner),
-                       ("compact.observer", compact_obs),
-                       ("history.observer", history_obs)]:
-        methods = {m for m in dir(obj) if not m.startswith("_") and callable(getattr(obj, m))}
-        missing = required - methods
-        assert not missing, f"{name} 缺少方法: {missing}"
+def test_on_flush_text_optional():
+    """on_flush 的 text 参数可选（默认参数），新旧调用都不崩。"""
+    import inspect
+    from kernel.observer import BaseObserver
 
-    print("observer ok")
+    sig = inspect.signature(BaseObserver.on_flush)
+    assert sig.parameters["text"].default == "", "text 应有默认值 '' 以兼容无参调用"
+    print("on_flush_text_optional ok")

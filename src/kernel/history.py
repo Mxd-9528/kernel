@@ -32,14 +32,3 @@ def reset_history():
     from .system import build_system
     return [{"role": "system", "content": build_system()}]
 
-
-# ── 观察者 ──────────────────────────────────────────────────
-
-from .observer import BaseObserver
-
-class _HistoryObserver(BaseObserver):
-    def save(self, messages):
-        save(messages)
-
-
-observer = _HistoryObserver()

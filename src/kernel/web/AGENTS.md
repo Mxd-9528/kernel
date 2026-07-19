@@ -4,17 +4,15 @@ WebSocket 服务端。终端与浏览器共用 `chat.py` 主循环，通过 Obse
 
 ## Observer 协议
 
-`agent()` 在 7 个节点通知 observer。`main.py` 用 `CompositeObserver` 显式组合订阅者；
-`--web` 模式额外注入 `WebSocketObserver`。
+`agent()` 在 5 个纯显示节点通知 observer。`main.py` 直接传 `spinner` 或 `ws_obs`；
+`--web` 模式注入 `WebSocketObserver`。
 
 | 方法 | 触发时机 | 消费者 |
 |---|---|---|
 | `on_thinking(token)` | 收到 reasoning token | 思考中 spinner |
 | `on_delta(token)` | 收到正文 token | 回复中 spinner |
-| `on_flush()` | 流结束 | 累积正文一次性渲染 |
+| `on_flush(text)` | 流结束 | 累积正文一次性渲染 |
 | `on_user(text)` | 浏览器发送用户输入 | 写入消息历史 |
-| `before_send(messages, model)` | 发 LLM 请求前 | 上下文压缩 |
-| `save(messages)` | 消息列表变更 | 存盘 |
 | `display_msg(content)` | 非流式消息（命令结果等） | 输出 |
 
 ## JSON-RPC 消息

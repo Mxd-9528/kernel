@@ -74,13 +74,3 @@ def test_dedup_tool_outputs():
     assert out[6] == mid[6]
     print("dedup_tool_outputs ok")
 
-
-def test_compact_observer():
-    from kernel.observer import BaseObserver
-    from kernel.compact import observer
-    assert isinstance(observer, BaseObserver)
-    required = {"on_thinking", "on_delta", "on_flush", "before_send", "save", "display_msg"}
-    methods = {m for m in dir(observer) if not m.startswith("_") and callable(getattr(observer, m))}
-    missing = required - methods
-    assert not missing, f"compact.observer 缺少方法: {missing}"
-    print("compact_observer ok")

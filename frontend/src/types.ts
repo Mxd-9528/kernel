@@ -5,7 +5,7 @@
 export type ServerMessage =
   | { jsonrpc: "2.0"; method: "window/thinking"; params: { token: string } }
   | { jsonrpc: "2.0"; method: "window/delta"; params: { token: string } }
-  | { jsonrpc: "2.0"; method: "window/flush"; params: Record<string, never> }
+  | { jsonrpc: "2.0"; method: "window/flush"; params: { text?: string } }
   | { jsonrpc: "2.0"; method: "window/display"; params: { content: string } }
   | { jsonrpc: "2.0"; method: "window/user"; params: { content: string } }
 

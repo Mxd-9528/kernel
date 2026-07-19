@@ -1,13 +1,6 @@
-'''入口：组合观察者，启动对话。'''
-from .observer import CompositeObserver
+"""入口：启动对话。"""
 from .display import spinner
-from .compact import observer as compact_observer
-from .history import observer as history_observer
 from .chat import chat
-
-# ── 显式组合观察者（非 import 副作用） ──────────────────────────
-
-observer = CompositeObserver([spinner, compact_observer, history_observer])
 
 
 def main():
@@ -22,7 +15,6 @@ def main():
         from .web.server import serve
 
         ws_obs = WebSocketObserver()
-        web_observer = CompositeObserver([ws_obs, compact_observer, history_observer])
 
         t = threading.Thread(target=serve, args=(ws_obs,), daemon=True)
         t.start()
@@ -31,17 +23,17 @@ def main():
         import os as _os
         import subprocess as _sp
         url = "http://localhost:8765"
-        print(f"  → 浏览器打开 {url}")
+        print(f"  \u2192 \u6d4f\u89c8\u5668\u6253\u5f00 {url}")
         try:
             _sp.run(f"code --open-url {url}", shell=True, timeout=5)
         except Exception:
             _os.startfile(url)
 
-        chat(model=model, observer=web_observer,
+        chat(model=model, observer=ws_obs,
              input_source=lambda: ws_obs.input_queue.get(),
              interrupt_event=ws_obs.interrupt_event)
     else:
-        chat(model=model, observer=observer)
+        chat(model=model, observer=spinner)
 
 
 if __name__ == "__main__":

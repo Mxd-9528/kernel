@@ -47,7 +47,7 @@ def test_spinner_observer():
     from kernel.observer import BaseObserver
     from kernel.display import spinner
     assert isinstance(spinner, BaseObserver)
-    required = {"on_thinking", "on_delta", "on_flush", "before_send", "save", "display_msg"}
+    required = {"on_thinking", "on_delta", "on_flush", "on_user", "display_msg"}
     methods = {m for m in dir(spinner) if not m.startswith("_") and callable(getattr(spinner, m))}
     missing = required - methods
     assert not missing, f"spinner 缺少方法: {missing}"

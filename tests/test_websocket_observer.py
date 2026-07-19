@@ -10,7 +10,7 @@ def test_websocket_observer():
     obs = WebSocketObserver()
     assert isinstance(obs, BaseObserver)
 
-    required = {"on_thinking", "on_delta", "on_flush", "before_send", "save", "display_msg"}
+    required = {"on_thinking", "on_delta", "on_flush", "on_user", "display_msg"}
     methods = {m for m in dir(obs) if not m.startswith("_") and callable(getattr(obs, m))}
     missing = required - methods
     assert not missing, f"缺少方法: {missing}"
@@ -26,25 +26,21 @@ def test_websocket_observer():
     msg = obs.messages.get(timeout=0.1)
     assert msg == {"jsonrpc": "2.0", "method": "window/delta", "params": {"token": "hello"}}
 
-    obs.on_flush()
+    obs.on_flush("hello")
     msg = obs.messages.get(timeout=0.1)
-    assert msg == {"jsonrpc": "2.0", "method": "window/flush", "params": {}}
+    assert msg == {"jsonrpc": "2.0", "method": "window/flush", "params": {"text": "hello"}}
 
     obs.display_msg("hello world")
     msg = obs.messages.get(timeout=0.1)
     assert msg == {"jsonrpc": "2.0", "method": "window/display", "params": {"content": "hello world"}}
 
-    obs.before_send([{"role": "user"}], "gpt-4")
-    obs.save([{"role": "user"}])
-    assert obs.messages.empty()
-
     obs.on_thinking("t1")
     obs.on_delta("d1")
-    obs.on_flush()
+    obs.on_flush("d1")
     expected = [
         {"jsonrpc": "2.0", "method": "window/thinking", "params": {"token": "t1"}},
         {"jsonrpc": "2.0", "method": "window/delta", "params": {"token": "d1"}},
-        {"jsonrpc": "2.0", "method": "window/flush", "params": {}},
+        {"jsonrpc": "2.0", "method": "window/flush", "params": {"text": "d1"}},
     ]
     for exp in expected:
         msg = obs.messages.get(timeout=0.1)

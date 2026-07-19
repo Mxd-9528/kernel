@@ -7,6 +7,8 @@ from .observer import BaseObserver, Observer
 
 from . import llm
 from . import runtime
+from . import compact
+from . import history
 
 # ── 模型响应 ──────────────────────────────────────────────────
 
@@ -57,7 +59,7 @@ def stream_model(messages: list[dict], model: str | None = None, *, observer: Ob
             content += warn
             observer.on_delta(warn)
     finally:
-        observer.on_flush()
+        observer.on_flush(content)
     return Response(content)
 
 
@@ -83,17 +85,17 @@ def agent(prompt: str, *, messages: list[dict] | None = None, model: str | None 
         if stop_event and stop_event.is_set():
             break
 
-        observer.before_send(messages, model)          # → compact 压缩
+        messages[:] = compact.compact(messages, model=model)   # 上下文压缩（纯后端逻辑）
 
         response = stream_model(messages, model, observer=observer, stop_event=stop_event)  # → display 流式渲染
         messages.append({"role": "assistant", "content": response.content})
-        observer.save(messages)                         # → history 存盘
+        history.save(messages)                          # 持久化（纯后端逻辑）
 
         if not response.has_code():
             return messages
 
         feedback = execute_code(response.code)
         messages.append({"role": "user", "content": feedback})
-        observer.save(messages)                         # → history 存盘
+        history.save(messages)                          # 持久化（纯后端逻辑）
 
     return messages

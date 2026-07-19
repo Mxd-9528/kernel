@@ -19,7 +19,6 @@ class WebSocketObserver(BaseObserver):
       - messages: 后台线程消费此队列，通过 WebSocket 广播
       - input_queue: 服务端收到浏览器消息后写入，chat() 的 input_source 从此读取
       - interrupt_event: 浏览器发送中断消息时设置，chat() 监听以终止生成
-      - before_send / save：空操作（压缩和持久化在服务端完成）
     不变量：所有 observer 方法 O(1) 入队，不阻塞。
     """
 
@@ -36,9 +35,9 @@ class WebSocketObserver(BaseObserver):
         self.messages.put({"jsonrpc": "2.0", "method": "window/delta",
                           "params": {"token": token}})
 
-    def on_flush(self) -> None:
+    def on_flush(self, text: str = "") -> None:
         self.messages.put({"jsonrpc": "2.0", "method": "window/flush",
-                          "params": {}})
+                          "params": {"text": text}})
 
     def on_user(self, text: str) -> None:
         self.messages.put({"jsonrpc": "2.0", "method": "window/user",

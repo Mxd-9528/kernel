@@ -87,14 +87,3 @@ def compress(messages, model):
     ]
     return "".join(token for kind, token in stream_chat(req, model) if kind == "content")
 
-
-# ── 观察者 ──────────────────────────────────────────────────
-
-from .observer import BaseObserver
-
-class _CompactObserver(BaseObserver):
-    def before_send(self, messages: list, model: str | None) -> None:
-        messages[:] = compact(messages, model=model)
-
-
-observer = _CompactObserver()

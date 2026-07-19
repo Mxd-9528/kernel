@@ -9,8 +9,7 @@ def test_chat_module():
 
 
 def test_main_module():
-    """main 模块可导入且有 observer 和 main。"""
-    from kernel.main import observer, main
-    assert observer is not None
+    """main 模块可导入且有 main 入口。"""
+    from kernel.main import main
     assert callable(main)
     print("main_module ok")

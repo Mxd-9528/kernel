@@ -83,7 +83,7 @@ class _Spinner(BaseObserver):
             sys.stdout.flush()
             self._stop.wait(0.1)
 
-    def on_flush(self):
+    def on_flush(self, text: str = ""):
         """停 spinner、清行、Rich 渲染正文。幂等。"""
         if self._thread is not None:
             self._stop.set()

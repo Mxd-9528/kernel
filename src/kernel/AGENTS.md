@@ -8,11 +8,11 @@ Python 内核。持久 IPython 进程 + 决策-执行-观察循环。
 
 ```
 while True:
-    before_send  → compact      # 上下文压缩
-    stream_model → display      # 模型输出 + 流式渲染
-    has_code()?  → 终止         # 纯文本 = 停止
-    execute_code → runtime      # <EXEC> 块执行
-    save         → history      # 持久化
+    compact.compact()  → 上下文压缩     # 纯后端逻辑
+    stream_model       → display       # 模型输出 + 流式渲染
+    has_code()?        → 终止          # 纯文本 = 停止
+    execute_code       → runtime       # <EXEC> 块执行
+    history.save()     → 持久化        # 纯后端逻辑
 ```
 
 每轮最多 `max_iters=20` 次迭代。`Ctrl+C` 与 WebSocket 中断共用 `threading.Event`。
