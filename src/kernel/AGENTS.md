@@ -47,7 +47,7 @@ while True:
 1. `prompt.md`（本目录）
 2. 预置函数清单（扫描 `tools/` 的签名 + docstring）
 3. 技能清单（扫描 `skills/` 的 YAML frontmatter）
-4. 可选 `system_append.md`（本目录，存在则拼）
+4. 可选 `AGENTS.md`（本目录，存在则拼）
 
 ## 配置文件
 
@@ -59,4 +59,4 @@ while True:
 本目录：
 - `prompt.md` — 系统提示词主体
 - `compact_prompt.md` — 压缩用提示词
-- `system_append.md` — 可选，拼在末尾
+- `AGENTS.md` — 可选，拼在末尾

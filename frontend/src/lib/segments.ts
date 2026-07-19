@@ -1,12 +1,17 @@
 /**
- * Contract: 按 <EXEC>...</EXEC> 标签把消息文本切成有序段列表。
+ * Contract: 按 <EXEC>+``` 组合标记把消息文本切成有序段列表。
+ *
+ * 只有 <EXEC> 后紧跟（可跳过空白）``` 才算真正的可执行块开始；
+ * 孤立的 <EXEC> 当普通文本。
  *
  * 用途：
- *   1. 流式判断——未闭合的 EXEC 段应被隐藏（"攒着"），文本段可即时打字机显示。
- *   2. 渲染分派——文本段走 markdown，EXEC 段走可折叠 CodeBlock。
+ *   1. 流式判断——真正的 exec 段（含未闭合）应被隐藏（"攒着"），
+ *      文本段和孤立 <EXEC> 可即时打字机显示。
+ *   2. 渲染分派——文本段走 markdown，已闭合 exec 段走可折叠 CodeBlock，
+ *      未闭合 exec 段走 markdown 文本。
  *
  * 承诺：
- *   - 所有段 content 拼接 = 原文抹去 <EXEC>/</EXEC> 标签后的结果
+ *   - 所有段 content 拼接 = 原文抹去 <EXEC>+``` / ```+</EXEC> 标记后的结果
  *   - 至多一个 closed=false 段，若存在必为末尾
  *   - 相邻段类型不同
  *   - 空字符串返回 []
@@ -17,7 +22,8 @@ export type Segment =
   | { type: "exec"; content: string; closed: boolean }
 
 const OPEN = "<EXEC>"
-const CLOSE = "</EXEC>"
+const _OPEN_RE = /<EXEC>\s*```(\w+)?\n?/
+const _CLOSE_RE = /```\s*<\/EXEC>/
 
 export function splitByExec(text: string): Segment[] {
   if (!text) return []
@@ -26,28 +32,28 @@ export function splitByExec(text: string): Segment[] {
   let i = 0
 
   while (i < text.length) {
-    const openIdx = text.indexOf(OPEN, i)
-
-    if (openIdx === -1) {
-      // 剩余全是文本
+    // 找真实开标记（<EXEC> 后紧跟 ```）
+    const m = text.slice(i).match(_OPEN_RE)
+    if (!m) {
       pushText(segments, text.slice(i))
       break
     }
+    const openStart = i + (m.index ?? 0)
+    if (openStart > i) pushText(segments, text.slice(i, openStart))
 
-    // openIdx 之前是文本
-    if (openIdx > i) pushText(segments, text.slice(i, openIdx))
+    const contentStart = openStart + m[0].length  // 跳过 <EXEC>\s*```
 
-    const contentStart = openIdx + OPEN.length
-    const closeIdx = text.indexOf(CLOSE, contentStart)
-
-    if (closeIdx === -1) {
-      // 未闭合 EXEC，吞掉剩余
-      segments.push({ type: "exec", content: text.slice(contentStart), closed: false })
+    // 找闭合标记（```\s*</EXEC>）
+    const rest = text.slice(contentStart)
+    const closeM = rest.match(_CLOSE_RE)
+    if (!closeM) {
+      // 未闭合 → closed=false
+      segments.push({ type: "exec", content: rest, closed: false })
       break
     }
-
-    segments.push({ type: "exec", content: text.slice(contentStart, closeIdx), closed: true })
-    i = closeIdx + CLOSE.length
+    const code = rest.slice(0, closeM.index ?? 0).trimEnd()
+    segments.push({ type: "exec", content: code, closed: true })
+    i = contentStart + (closeM.index ?? 0) + closeM[0].length
   }
 
   return segments
@@ -74,7 +80,7 @@ export function visiblePrefix(buffer: string): string {
   const parts: string[] = []
   for (const s of segs) {
     if (s.type === "exec" && !s.closed) break
-    if (s.type === "exec") parts.push(`<EXEC>${s.content}</EXEC>`)
+    if (s.type === "exec") parts.push(rebuildExec(s.content))
     else parts.push(s.content)
   }
   return stripTrailingOpenPrefix(parts.join(""))
@@ -87,10 +93,15 @@ function stripTrailingOpenPrefix(text: string): string {
   return text
 }
 
-/** buffer 中是否存在未闭合 EXEC（决定是否显示 StreamingIndicator）。 */
+/** 从 exec 段内容重建可见文本（含标记），用于 visiblePrefix。 */
+function rebuildExec(content: string): string {
+  return `<EXEC>\n\`\`\`\n${content}\n\`\`\`</EXEC>`
+}
+
+/** buffer 中是否存在未闭合 exec 段（决定是否显示 StreamingIndicator）。 */
 export function hasPendingExec(buffer: string): boolean {
-  const openIdx = buffer.lastIndexOf(OPEN)
-  if (openIdx === -1) return false
-  const closeIdx = buffer.indexOf(CLOSE, openIdx + OPEN.length)
-  return closeIdx === -1
+  const segs = splitByExec(buffer)
+  if (segs.length === 0) return false
+  const last = segs[segs.length - 1]
+  return last.type === "exec" && !last.closed
 }

@@ -36,7 +36,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               </Markdown>
             )
           }
-          return <ExecSegment key={i} content={seg.content} />
+          return <ExecSegment key={i} content={seg.content} closed={seg.closed} />
         })}
       </div>
     )
@@ -62,8 +62,9 @@ function ThinkingBubble({ content }: { content: string }) {
   )
 }
 
-/** EXEC 段：从围栏代码块提取代码后走可折叠 CodeBlock（或 EditDiffView）。 */
-function ExecSegment({ content }: { content: string }) {
+/** EXEC 段：未闭合的走 markdown 文本，已闭合的走可折叠 CodeBlock（或 EditDiffView）。 */
+function ExecSegment({ content, closed }: { content: string; closed: boolean }) {
+  if (!closed) return <Markdown>{content}</Markdown>
   const { code, language } = parseFence(content)
   const editDiff = parseEditCall(code)
   if (editDiff) return <EditDiffView code={code} diff={editDiff} />
