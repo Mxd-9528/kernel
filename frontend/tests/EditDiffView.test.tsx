@@ -43,6 +43,53 @@ edit("foo.py", "old", "new")`
     expect(parseEditCall(`edit("foo.py")`)).toBeNull()
     expect(parseEditCall(`edit("foo.py", "old")`)).toBeNull()
   })
+
+  it("识别 raw 前缀（Windows 路径）", () => {
+    const code = `edit(r"C:\\a\\b.css", "old", "new")`
+    const diff = parseEditCall(code)
+    expect(diff).not.toBeNull()
+    expect(diff!.filePath).toBe("C:\\a\\b.css")
+    expect(diff!.oldCode).toBe("old")
+  })
+
+  it("识别关键字参数", () => {
+    const code = `edit(file_path="a.py", old_string="X", new_string="Y")`
+    const diff = parseEditCall(code)
+    expect(diff).not.toBeNull()
+    expect(diff!.filePath).toBe("a.py")
+    expect(diff!.oldCode).toBe("X")
+    expect(diff!.newCode).toBe("Y")
+  })
+
+  it("位置 + kwargs 混用（真实调用形式）", () => {
+    const code = `edit(r"C:\\x\\App.css",\n    old_string=".a { p: 6px; }",\n    new_string=".a { p: 8px; }")`
+    const diff = parseEditCall(code)
+    expect(diff).not.toBeNull()
+    expect(diff!.filePath).toBe("C:\\x\\App.css")
+    expect(diff!.oldCode).toBe(".a { p: 6px; }")
+    expect(diff!.newCode).toBe(".a { p: 8px; }")
+  })
+
+  it("识别 triple-quoted 字符串", () => {
+    const code = 'edit("a.py", """line1\nline2""", """new1\nnew2""")'
+    const diff = parseEditCall(code)
+    expect(diff).not.toBeNull()
+    expect(diff!.oldCode).toBe("line1\nline2")
+    expect(diff!.newCode).toBe("new1\nnew2")
+  })
+
+  it("忽略尾部非字符串 kwarg（replace_all=True）", () => {
+    const code = `edit("a.py", "old", "new", replace_all=True)`
+    const diff = parseEditCall(code)
+    expect(diff).not.toBeNull()
+    expect(diff!.filePath).toBe("a.py")
+    expect(diff!.newCode).toBe("new")
+  })
+
+  it("readit( 之类近似前缀不误匹配", () => {
+    expect(parseEditCall(`readit("x", "y", "z")`)).toBeNull()
+    expect(parseEditCall(`my_edit("x", "y", "z")`)).toBeNull()
+  })
 })
 
 describe("EditDiffView 视觉 diff", () => {

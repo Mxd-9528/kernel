@@ -7,19 +7,69 @@ export interface EditDiff {
   newCode: string
 }
 
-// 纯函数：从 content 解析 edit() 调用
-export function parseEditCall(code: string): EditDiff | null {
-  // 简单的正则，不处理复杂转义
-  // 不加前缀守卫——首行是注释时也应能识别（正则自身即守卫）
-  const pattern = /edit\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])([\s\S]*?)\3\s*,\s*(["'])([\s\S]*?)\5\s*,?\s*\)/
-  const match = code.match(pattern)
-  if (!match) return null
+// 识别锚点：edit 前是行首或非标识符字符——避免 readit( 之类误匹配
+const EDIT_ANCHOR = /(?:^|[^A-Za-z0-9_.])edit\s*\(/
 
-  return {
-    filePath: match[2],
-    oldCode: match[4],
-    newCode: match[6],
+// 读取 Python 字符串字面量（支持 raw 前缀、triple-quoted、常见转义）
+function readString(code: string, i: number): { value: string; next: number } | null {
+  let j = i
+  const pre = code.slice(j).match(/^[rRbBfFuU]{1,2}(?=['"])/)
+  const raw = !!pre && /[rR]/.test(pre[0])
+  if (pre) j += pre[0].length
+  const ch = code[j]
+  if (ch !== '"' && ch !== "'") return null
+  const triple = code.slice(j, j + 3) === ch + ch + ch
+  const quote = triple ? ch + ch + ch : ch
+  j += quote.length
+  const ESC: Record<string, string> = { n: "\n", t: "\t", r: "\r", "\\": "\\", "\"": "\"", "'": "'", "0": "\0" }
+  let value = ""
+  while (j < code.length) {
+    if (code.slice(j, j + quote.length) === quote) return { value, next: j + quote.length }
+    if (!raw && code[j] === "\\" && j + 1 < code.length) {
+      const nxt = code[j + 1]
+      value += ESC[nxt] !== undefined ? ESC[nxt] : code[j] + nxt
+      j += 2
+      continue
+    }
+    value += code[j]
+    j++
   }
+  return null
+}
+
+// 纯函数：从 content 解析 edit() 调用
+// 分层：锚点识别 → 参数扫描（位置 + kwargs + 忽略非字符串 kwarg 如 replace_all=True）
+export function parseEditCall(code: string): EditDiff | null {
+  const m = code.match(EDIT_ANCHOR)
+  if (!m) return null
+  let i = m.index! + m[0].length
+  const pos: string[] = []
+  const kw: Record<string, string> = {}
+  while (i < code.length) {
+    while (i < code.length && /\s/.test(code[i])) i++
+    if (code[i] === ")") break
+    const nameM = code.slice(i).match(/^([A-Za-z_]\w*)\s*=(?!=)\s*/)
+    if (nameM) {
+      const after = i + nameM[0].length
+      const s = readString(code, after)
+      if (s) { kw[nameM[1]] = s.value; i = s.next }
+      else { i = after; while (i < code.length && code[i] !== "," && code[i] !== ")") i++ }
+    } else {
+      const s = readString(code, i)
+      if (!s) return null
+      pos.push(s.value)
+      i = s.next
+    }
+    while (i < code.length && /\s/.test(code[i])) i++
+    if (code[i] === ",") i++
+    else if (code[i] === ")") break
+    else return null
+  }
+  const filePath = pos[0] ?? kw.file_path
+  const oldCode = pos[1] ?? kw.old_string
+  const newCode = pos[2] ?? kw.new_string
+  if (filePath === undefined || oldCode === undefined || newCode === undefined) return null
+  return { filePath, oldCode, newCode }
 }
 
 const PREVIEW_LINES = 3
