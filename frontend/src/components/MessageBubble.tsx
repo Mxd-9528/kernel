@@ -36,7 +36,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               </Markdown>
             )
           }
-          if (!seg.closed) return null  // 防御：未闭合 EXEC 不应到达渲染层
           return <ExecSegment key={i} content={seg.content} />
         })}
       </div>

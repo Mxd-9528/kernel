@@ -7,7 +7,7 @@ import { StreamingIndicator } from "./components/StreamingIndicator"
 import "./theme.css"
 import "./App.css"
 
-const WS_URL = "ws://localhost:8765/ws"
+const WS_URL = `${location.origin.replace(/^http/, "ws")}/ws`
 
 function App() {
   const { status, messages, streaming, send, interrupt } = useWebSocket(WS_URL)

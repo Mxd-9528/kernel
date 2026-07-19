@@ -1,8 +1,8 @@
 /**
  * 消息聚合状态机：纯函数 reducer + 投影。
  *
- * 模式：Reducer（reduceServerMessage）+ Projection（pendingMessage 从 buffer 派生）
- *      + State Machine（bufferType 三态：thinking / delta / null）。
+ * 模式：Reducer（reduceServerMessage）+ Projection（draftMessage 从 buffer 派生）
+ *      + State Machine（phase 三态：thinking / delta / null）。
  *
  * 对应后端 observer.py 的 5 种 JSON-RPC 通知：
  *   window/thinking → 模型思考 token
@@ -15,44 +15,44 @@
 import type { ServerMessage, RenderedMessage } from "../../types"
 import { visiblePrefix } from "../../lib/segments"
 
-export interface BufferState {
-  messages: RenderedMessage[]  // 已定型消息（不含 pending）
+export interface StreamState {
+  messages: RenderedMessage[]  // 已定型消息（不含 draft）
   buffer: string
-  bufferType: "thinking" | "delta" | null
+  phase: "thinking" | "delta" | null
   tokenCount: number
 }
 
-const PENDING_ID = "__pending__"
+const DRAFT_ID = "__draft__"
 
 export function reduceServerMessage(
-  state: BufferState,
+  state: StreamState,
   msg: ServerMessage,
-): BufferState {
+): StreamState {
   switch (msg.method) {
     case "window/thinking":
       return {
         ...state,
         buffer: state.buffer + msg.params.token,
-        bufferType: "thinking",
+        phase: "thinking",
         tokenCount: state.tokenCount + 1,
       }
     case "window/delta":
       // 从 thinking 切换到 delta：先产出 thinking 消息
-      if (state.bufferType === "thinking" && state.buffer) {
+      if (state.phase === "thinking" && state.buffer) {
         return {
           messages: [
             ...state.messages,
             { id: crypto.randomUUID(), role: "thinking", content: state.buffer },
           ],
           buffer: msg.params.token,
-          bufferType: "delta",
+          phase: "delta",
           tokenCount: 1,
         }
       }
       return {
         ...state,
         buffer: state.buffer + msg.params.token,
-        bufferType: "delta",
+        phase: "delta",
         tokenCount: state.tokenCount + 1,
       }
     case "window/flush": {
@@ -62,12 +62,12 @@ export function reduceServerMessage(
           ...state.messages,
           {
             id: crypto.randomUUID(),
-            role: state.bufferType === "thinking" ? "thinking" : "assistant",
+            role: state.phase === "thinking" ? "thinking" : "assistant",
             content: state.buffer,
           },
         ],
         buffer: "",
-        bufferType: null,
+        phase: null,
         tokenCount: 0,
       }
     }
@@ -91,22 +91,14 @@ export function reduceServerMessage(
 }
 
 /**
- * 从 buffer 派生 pending 消息（投影，无独立生命周期）。
- * 仅 delta（assistant 正文）派生 pending——按 visiblePrefix 隐藏未闭合 EXEC。
+ * 从 buffer 派生 draft 消息（投影，无独立生命周期）。
+ * 仅 delta（assistant 正文）派生 draft——按 visiblePrefix 隐藏未闭合 EXEC。
  * thinking 期间返回 null：思考内容不流式展示，flush 后作为完整消息进入历史。
  * "正在思考"的反馈由 streaming 指示器承担，与思考内容本身分离。
- *
- * displayedChars: 逐字符打字机的显示位置（buffer 前缀长度）。
- * 不传时用完整 buffer——保留原语义，供无速率控制的场景使用。
  */
-export function pendingMessage(
-  state: BufferState,
-  displayedChars?: number,
-): RenderedMessage | null {
-  if (!state.buffer || state.bufferType !== "delta") return null
-  const n = displayedChars ?? state.buffer.length
-  const displayed = state.buffer.slice(0, n)
-  const content = visiblePrefix(displayed)
+export function draftMessage(state: StreamState): RenderedMessage | null {
+  if (!state.buffer || state.phase !== "delta") return null
+  const content = visiblePrefix(state.buffer)
   if (!content) return null
-  return { id: PENDING_ID, role: "assistant", content }
+  return { id: DRAFT_ID, role: "assistant", content }
 }

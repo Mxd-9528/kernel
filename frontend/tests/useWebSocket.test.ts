@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest"
 import {
   reduceServerMessage,
-  pendingMessage,
-  type BufferState,
+  draftMessage,
+  type StreamState,
 } from "../src/hooks/useWebSocket"
 import type { ServerMessage } from "../src/types"
 
-function empty(): BufferState {
-  return { messages: [], buffer: "", bufferType: null, tokenCount: 0 }
+function empty(): StreamState {
+  return { messages: [], buffer: "", phase: null, tokenCount: 0 }
 }
 
 function thinking(token: string): ServerMessage {
@@ -31,7 +31,7 @@ describe("reduceServerMessage — 基础状态机", () => {
     const s = reduceServerMessage(empty(), thinking("我正在"))
     expect(s.messages).toHaveLength(0)
     expect(s.buffer).toBe("我正在")
-    expect(s.bufferType).toBe("thinking")
+    expect(s.phase).toBe("thinking")
   })
 
   it("多个 thinking token 连续累积", () => {
@@ -92,7 +92,7 @@ describe("reduceServerMessage — 基础状态机", () => {
     expect(s.messages).toHaveLength(1)
     expect(s.messages[0].role).toBe("thinking")
     expect(s.buffer).toBe("回答")
-    expect(s.bufferType).toBe("delta")
+    expect(s.phase).toBe("delta")
     expect(s.tokenCount).toBe(1)
   })
 })
@@ -119,15 +119,15 @@ describe("reduceServerMessage — tokenCount", () => {
   })
 })
 
-describe("pendingMessage — 从 buffer 派生的投影", () => {
+describe("draftMessage — 从 buffer 派生的投影", () => {
   it("空 buffer → null", () => {
-    expect(pendingMessage(empty())).toBeNull()
+    expect(draftMessage(empty())).toBeNull()
   })
 
   it("thinking buffer → null（思考内容不流式展示，flush 后才进历史）", () => {
     let s = empty()
     s = reduceServerMessage(s, thinking("想..."))
-    expect(pendingMessage(s)).toBeNull()
+    expect(draftMessage(s)).toBeNull()
   })
 
   it("thinking flush 后作为完整消息进入历史", () => {
@@ -138,59 +138,42 @@ describe("pendingMessage — 从 buffer 派生的投影", () => {
     expect(s.messages).toHaveLength(1)
     expect(s.messages[0].role).toBe("thinking")
     expect(s.messages[0].content).toBe("想一想再想想")
-    expect(pendingMessage(s)).toBeNull()
+    expect(draftMessage(s)).toBeNull()
   })
 
-  it("delta 纯文本 → assistant pending 全显（无 displayedChars）", () => {
+  it("delta 纯文本 → assistant draft 全显", () => {
     let s = empty()
     s = reduceServerMessage(s, delta("你好"))
-    const p = pendingMessage(s)
+    const p = draftMessage(s)
     expect(p?.role).toBe("assistant")
     expect(p?.content).toBe("你好")
   })
 
-  it("displayedChars 控制打字机可见前缀", () => {
-    let s = empty()
-    s = reduceServerMessage(s, delta("你好世界"))
-    expect(pendingMessage(s, 0)).toBeNull()
-    expect(pendingMessage(s, 2)?.content).toBe("你好")
-    expect(pendingMessage(s, 4)?.content).toBe("你好世界")
-  })
-
-  it("displayedChars 追到未闭合 EXEC 前缀时，可见部分不含 EXEC 标记", () => {
-    let s = empty()
-    s = reduceServerMessage(s, delta("你好\n<EXEC>x"))
-    // displayedChars=3 只到 "你好\n"，全可见
-    expect(pendingMessage(s, 3)?.content).toBe("你好\n")
-    // displayedChars=8 打到 "你好\n<EXEC"，EXEC 未闭合被 visiblePrefix 切掉
-    expect(pendingMessage(s, 8)?.content).toBe("你好\n")
-  })
-
-  it("delta 含未闭合 EXEC → pending 隐藏 EXEC 后的内容", () => {
+  it("delta 含未闭合 EXEC → draft 隐藏 EXEC 后的内容", () => {
     let s = empty()
     s = reduceServerMessage(s, delta("你好\n<EXEC>\n```py\nx="))
-    const p = pendingMessage(s)
+    const p = draftMessage(s)
     expect(p?.content).toBe("你好\n")
   })
 
-  it("delta 含已闭合 EXEC → pending 保留完整 EXEC 段", () => {
+  it("delta 含已闭合 EXEC → draft 保留完整 EXEC 段", () => {
     let s = empty()
     s = reduceServerMessage(s, delta("<EXEC>a</EXEC>后"))
-    const p = pendingMessage(s)
+    const p = draftMessage(s)
     expect(p?.content).toBe("<EXEC>a</EXEC>后")
   })
 
   it("delta 只有未闭合 EXEC（visiblePrefix 为空）→ null", () => {
     let s = empty()
     s = reduceServerMessage(s, delta("<EXEC>x"))
-    expect(pendingMessage(s)).toBeNull()
+    expect(draftMessage(s)).toBeNull()
   })
 
-  it("flush 后 pending 消失", () => {
+  it("flush 后 draft 消失", () => {
     let s = empty()
     s = reduceServerMessage(s, delta("你好"))
     s = reduceServerMessage(s, flush())
-    expect(pendingMessage(s)).toBeNull()
+    expect(draftMessage(s)).toBeNull()
   })
 
   it("flush 完整保留 buffer 含未闭合 EXEC 的残余（防丢内容）", () => {
