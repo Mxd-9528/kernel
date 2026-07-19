@@ -1,25 +1,30 @@
 # web/ AGENTS.md
 
-WebSocket 服务端。终端与浏览器共用 `chat.py` 主循环，通过 Observer 分流输出。
+WebSocket 服务端。终端与浏览器共用 `chat.py` 主循环。两者都用 `ProtocolObserver`
+把显示事件序列化为 JSON-RPC dict 入队，各自的传输适配器从队列消费——协议是唯一事实源。
 
-## Observer 协议
+## Observer 协议（六边形架构）
 
-`agent()` 在 5 个纯显示节点通知 observer。`main.py` 直接传 `spinner` 或 `ws_obs`；
-`--web` 模式注入 `WebSocketObserver`。
+- **Port**：`observer.ProtocolObserver` —— `agent()` 在 5 个纯显示节点调其方法，
+  产 JSON-RPC dict 入 `self.messages` 队列。序列化的唯一事实源。
+- **Adapter**：从队列消费 dict 的传输层。已有两个：
+  - `web/observer.WebSocketObserver`（继承 `ProtocolObserver`）+ `web/server.py` → 浏览器
+  - `display.TerminalRenderer`（消费 `obs.messages`）→ 终端 Rich 渲染
+- 新语言/新传输前端接入：继承 `ProtocolObserver` 复用序列化 → 从队列取 dict → 写传输。
 
-| 方法 | 触发时机 | 消费者 |
+| 方法 | JSON-RPC method | 触发时机 |
 |---|---|---|
-| `on_thinking(token)` | 收到 reasoning token | 思考中 spinner |
-| `on_delta(token)` | 收到正文 token | 回复中 spinner |
-| `on_flush(text)` | 流结束 | 累积正文一次性渲染 |
-| `on_user(text)` | 浏览器发送用户输入 | 写入消息历史 |
-| `display_msg(content)` | 非流式消息（命令结果等） | 输出 |
+| `on_thinking(token)` | `window/thinking` | 收到 reasoning token |
+| `on_delta(token)` | `window/delta` | 收到正文 token |
+| `on_flush(text)` | `window/flush` | 流结束，全文兜底 |
+| `on_user(text)` | `window/user` | 浏览器发送用户输入 |
+| `display_msg(content)` | `window/display` | 非流式消息（命令结果等） |
 
 ## JSON-RPC 消息
 
-WebSocket 走 JSON-RPC 2.0 **Notification**（无 id，无回复）。
+走 JSON-RPC 2.0 **Notification**（无 id，无回复）。
 
-**出站（服务端 → 浏览器）**：
+**出站（服务端 → 浏览器 / 内核 → 终端）**：
 - `window/thinking` — reasoning token
 - `window/delta` — 正文 token
 - `window/flush` — 流结束标记

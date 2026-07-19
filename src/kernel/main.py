@@ -1,5 +1,4 @@
 """入口：启动对话。"""
-from .display import spinner
 from .chat import chat
 
 
@@ -33,7 +32,15 @@ def main():
              input_source=lambda: ws_obs.input_queue.get(),
              interrupt_event=ws_obs.interrupt_event)
     else:
-        chat(model=model, observer=spinner)
+        # 终端与 web 对称：ProtocolObserver 入队，TerminalRenderer 后台消费
+        from .observer import ProtocolObserver
+        from .display import TerminalRenderer
+
+        obs = ProtocolObserver()
+        renderer = TerminalRenderer(obs.messages)
+        threading.Thread(target=renderer.run, daemon=True).start()
+
+        chat(model=model, observer=obs)
 
 
 if __name__ == "__main__":

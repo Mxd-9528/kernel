@@ -28,10 +28,10 @@ while True:
 | `runtime.py` + `inject.py` | 持久 IPython 内核 + 首轮命名空间注入 |
 | `system.py` | 扫 tools/ 与 skills/，组装系统提示词 |
 | `llm.py` | 模型调用（流式） |
-| `display.py` | 终端 Markdown 渲染（rich） |
+| `display.py` | 终端传输适配器：从协议队列消费 → Rich 渲染 |
 | `history.py` | 消息持久化到 history.json |
 | `compact.py` | 上下文压缩 |
-| `observer.py` | Observer 协议基类与组合器 |
+| `observer.py` | Observer 契约 + ProtocolObserver（JSON-RPC 序列化 Port，唯一事实源） |
 | `commands.py` | 斜杠命令处理 |
 
 ## 注入机制
