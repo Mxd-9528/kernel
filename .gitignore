@@ -30,3 +30,6 @@ src/kernel/web/static/
 
 # 临时笔记
 enter-plan-mode-notes.md
+
+# 分析/规划报告（不属于项目资产）
+reports/
